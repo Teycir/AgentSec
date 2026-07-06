@@ -3,3 +3,4 @@ target/
 reports/
 .env
 .env.*
+.gif-build/

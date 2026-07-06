@@ -1,6 +1,6 @@
 # 🛡️ AgentSec
 
-![AgentSec CLI demo](public/agentsec_cli.gif)
+![AgentSec CLI demo](public/agentsec_workflow_demo.gif)
 
 > **CI/CD-Ready Security Testing and Benchmarking CLI for LLM, RAG, and AI Agent Applications.**
 >
