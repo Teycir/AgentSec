@@ -1,0 +1,8 @@
+[package]
+name = "agentsec-integrations"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+agentsec-core = { workspace = true }
