@@ -48,7 +48,7 @@ pub async fn run_suite(
             if let Some(max_latency) = limits.max_latency_per_request_ms {
                 if request_latency_ms > max_latency {
                     result.findings.push(Finding {
-                        id: format!("{}:{}:resource_exhaustion_latency", target.id, suite.id),
+                        id: Uuid::new_v4().to_string(),
                         run_id: run_id.to_string(),
                         target_id: target.id.clone(),
                         suite_id: suite.id.clone(),
@@ -87,7 +87,7 @@ pub async fn run_suite(
             if let Some(max_tokens) = limits.max_tokens_per_session {
                 if cumulative_tokens > max_tokens {
                     result.findings.push(Finding {
-                        id: format!("{}:{}:resource_exhaustion_tokens", target.id, suite.id),
+                        id: Uuid::new_v4().to_string(),
                         run_id: run_id.to_string(),
                         target_id: target.id.clone(),
                         suite_id: suite.id.clone(),
