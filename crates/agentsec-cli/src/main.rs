@@ -257,6 +257,7 @@ suppressions:
                     baseline: None,
                     telemetry: agentsec_config::project::TelemetrySettings::default(),
                     policies: None,
+                    limits: None,
                 }
             };
 
@@ -551,7 +552,15 @@ async fn run_scan_pipeline(
                 suite.name.cyan(),
                 target.id.yellow()
             );
-            match agentsec_runner::run_suite(&client, &run_id, target, suite).await {
+            match agentsec_runner::run_suite(
+                &client,
+                &run_id,
+                target,
+                suite,
+                config.limits.as_ref(),
+            )
+            .await
+            {
                 Ok(res) => {
                     for (test_id, err_msg) in res.errors {
                         eprintln!(
