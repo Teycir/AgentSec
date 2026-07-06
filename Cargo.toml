@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "crates/agentsec",
     "crates/agentsec-cli",
     "crates/agentsec-core",
     "crates/agentsec-config",
@@ -17,6 +18,7 @@ license = "MIT"
 repository = "https://github.com/agentsec/agentsec-lab"
 
 [workspace.dependencies]
+agentsec = { path = "crates/agentsec" }
 agentsec-core = { path = "crates/agentsec-core" }
 agentsec-config = { path = "crates/agentsec-config" }
 agentsec-runner = { path = "crates/agentsec-runner" }

@@ -1,0 +1,22 @@
+[package]
+name = "agentsec"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[features]
+default = ["core", "config", "runner", "scanners", "report", "integrations"]
+core = ["dep:agentsec-core"]
+config = ["dep:agentsec-config"]
+runner = ["dep:agentsec-runner"]
+scanners = ["dep:agentsec-scanners"]
+report = ["dep:agentsec-report"]
+integrations = ["dep:agentsec-integrations"]
+
+[dependencies]
+agentsec-core = { workspace = true, optional = true }
+agentsec-config = { workspace = true, optional = true }
+agentsec-runner = { workspace = true, optional = true }
+agentsec-scanners = { workspace = true, optional = true }
+agentsec-report = { workspace = true, optional = true }
+agentsec-integrations = { workspace = true, optional = true }

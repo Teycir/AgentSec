@@ -3,6 +3,18 @@
 version = 4
 
 [[package]]
+name = "agentsec"
+version = "0.1.0"
+dependencies = [
+ "agentsec-config",
+ "agentsec-core",
+ "agentsec-integrations",
+ "agentsec-report",
+ "agentsec-runner",
+ "agentsec-scanners",
+]
+
+[[package]]
 name = "agentsec-cli"
 version = "0.1.0"
 dependencies = [
