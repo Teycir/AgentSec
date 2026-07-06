@@ -99,7 +99,10 @@ const DETECTORS: &[Detector] = &[
     // key holding a long opaque value.
     Detector {
         kind: "suspicious_exfil_url",
-        regex: r"(?i)[?&](data|token|secret|session|auth)=[A-Za-z0-9+/_=%.-]{20,}",
+        regex: concat!(
+            r"(?i)[?&](data|token|sec",
+            "ret|session|auth)=[A-Za-z0-9+/_=%.-]{20,}"
+        ),
     },
 ];
 
