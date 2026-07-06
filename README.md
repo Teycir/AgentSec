@@ -1,12 +1,12 @@
-# 🛡️ AgentSec Lab
+# 🛡️ AgentSec
 
-![AgentSec Lab CLI demo](public/agentsec_cli.gif)
+![AgentSec CLI demo](public/agentsec_cli.gif)
 
 > **CI/CD-Ready Security Testing and Benchmarking CLI for LLM, RAG, and AI Agent Applications.**
 >
 > *"Like Semgrep, Trivy, and ZAP baseline for LLM applications."*
 
-**Why not just run manual red teaming?** Manual penetration testing of LLM applications is slow, hard to automate, and doesn't scale with daily prompt adjustments, RAG chunking updates, or new tool definitions. AgentSec Lab allows you to run repeatable security scans, establish baselines, enforce suppressions, and fail builds on security regressions directly within your CI/CD pipelines. [Full comparison ↓](#2-agentsec-lab-vs-research-jailbreak-frameworks)
+**Why not just run manual red teaming?** Manual penetration testing of LLM applications is slow, hard to automate, and doesn't scale with daily prompt adjustments, RAG chunking updates, or new tool definitions. AgentSec allows you to run repeatable security scans, establish baselines, enforce suppressions, and fail builds on security regressions directly within your CI/CD pipelines. [Full comparison ↓](#2-agentsec-vs-research-jailbreak-frameworks)
 
 > [!NOTE]
 > **For AI Agents & LLM coding assistants:** We ship a machine-readable [`llms.txt`](llms.txt) file at the root of the repository. You can read it directly to understand the full CLI architecture, subcommand surface, code mapping, and exit codes of the project in a single token-efficient pass.
@@ -17,9 +17,9 @@
 <summary><strong>🤖 For developers and DevSecOps: quick CLI summary (expand)</strong></summary>
 
 ```yaml
-name: AgentSec Lab
+name: AgentSec
 command: agentsec
-install: cargo install agentsec-lab
+install: cargo install --path crates/agentsec-cli
 languages: Rust (single binary)
 operating_modes: [ci, scan, validate, init, version]
 target_types: [http-chat, openai-compatible, command, lab]
@@ -49,9 +49,9 @@ Full usage instructions: `agentsec --help` or run individual subcommand helps li
 
 ## 🎯 Use Cases
 
-AgentSec Lab's core value is that it translates LLM vulnerability scans into standardized, CI/CD-friendly tests with stable exit codes and machine-readable reports.
+AgentSec's core value is that it translates LLM vulnerability scans into standardized, CI/CD-friendly tests with stable exit codes and machine-readable reports.
 
-| Scenario | What happens without AgentSec Lab | What AgentSec Lab does |
+| Scenario | What happens without AgentSec | What AgentSec does |
 | :--- | :--- | :--- |
 | **Securing prompt integrity in staging** | AI application is deployed to production vulnerable to indirect prompt injection or adversarial overrides | Runs benign canary override injections to verify target refuses instruction overrides while still completing the task |
 | **Preventing system prompt leakage** | System instructions or secret tokens are disclosed to users asking direct instructions queries | Scans output for system prompt exposure indicators ("developer instructions", "system prompt") and blocks deployment |
@@ -64,16 +64,16 @@ AgentSec Lab's core value is that it translates LLM vulnerability scans into sta
 
 ## 📑 Table of Contents
 
-- [🛡️ AgentSec Lab](#️-agentsec-lab)
+- [🛡️ AgentSec](#️-agentsec)
   - [🎯 Use Cases](#-use-cases)
   - [📑 Table of Contents](#-table-of-contents)
-  - [⚡ AgentSec Lab in 3 Minutes](#-agentsec-lab-in-3-minutes)
-    - [What is AgentSec Lab?](#what-is-agentsec-lab)
+  - [⚡ AgentSec in 3 Minutes](#-agentsec-in-3-minutes)
+    - [What is AgentSec?](#what-is-agentsec)
     - [Why does it exist?](#why-does-it-exist)
     - [Who is it for?](#who-is-it-for)
     - [Why not alternatives?](#why-not-alternatives)
-      - [1. AgentSec Lab vs. Traditional Static Code Analysis (SAST/DAST)](#1-agentsec-lab-vs-traditional-static-code-analysis-sastdast)
-      - [2. AgentSec Lab vs. Research Jailbreak Frameworks](#2-agentsec-lab-vs-research-jailbreak-frameworks)
+      - [1. AgentSec vs. Traditional Static Code Analysis (SAST/DAST)](#1-agentsec-vs-traditional-static-code-analysis-sastdast)
+      - [2. AgentSec vs. Research Jailbreak Frameworks](#2-agentsec-vs-research-jailbreak-frameworks)
   - [⏱️ Quickstart in 30 Seconds](#️-quickstart-in-30-seconds)
   - [⏱️ Quickstart from Source](#️-quickstart-from-source)
     - [1. Clone](#1-clone)
@@ -108,28 +108,28 @@ AgentSec Lab's core value is that it translates LLM vulnerability scans into sta
 
 ---
 
-## ⚡ AgentSec Lab in 3 Minutes
+## ⚡ AgentSec in 3 Minutes
 
-### What is AgentSec Lab?
-AgentSec Lab is a lightweight, local-first security testing command-line tool (CLI) built in Rust that scans LLM wrappers, RAG databases, and autonomous AI agents for OWASP Top 10 vulnerabilities (including prompt injection, data disclosure, and insecure output rendering).
+### What is AgentSec?
+AgentSec is a lightweight, local-first security testing command-line tool (CLI) built in Rust that scans LLM wrappers, RAG databases, and autonomous AI agents for OWASP Top 10 vulnerabilities (including prompt injection, data disclosure, and insecure output rendering).
 
 ### Why does it exist?
-AI and LLM wrappers introduce dynamic, non-deterministic behaviors that conventional static analysis tools (like Semgrep or Trivy) cannot inspect. Existing LLM security scanners are mostly python-heavy research toolkits designed for interactive red-teaming rather than structured automated pipelines. AgentSec Lab bridges this gap by offering a single, dependency-free binary designed for automation.
+AI and LLM wrappers introduce dynamic, non-deterministic behaviors that conventional static analysis tools (like Semgrep or Trivy) cannot inspect. Existing LLM security scanners are mostly python-heavy research toolkits designed for interactive red-teaming rather than structured automated pipelines. AgentSec bridges this gap by offering a single, dependency-free binary designed for automation.
 
 ### Why not alternatives?
 
-#### 1. AgentSec Lab vs. Traditional Static Code Analysis (SAST/DAST)
+#### 1. AgentSec vs. Traditional Static Code Analysis (SAST/DAST)
 
-| Dimension | AgentSec Lab | Semgrep / Trivy | OWASP ZAP |
+| Dimension | AgentSec | Semgrep / Trivy | OWASP ZAP |
 | :--- | :--- | :--- | :--- |
 | **Primary Target** | **LLMs, RAG context, Agent tool calls** | Codebase dependencies & structural syntax | Web API parameters and HTTP protocols |
 | **Evaluation Method** | **Adversarial runtime prompts** | AST parsing & configuration matching | Fuzzing raw HTTP headers/paths |
 | **Redaction Controls** | **Yes** (Automatic key & PII masking in findings) | No | No (logs requests verbatim) |
 | **Stateful Baselines** | **Yes** (Compares model behaviors against prior runs) | Yes (diff scans) | No (ad-hoc runs) |
 
-#### 2. AgentSec Lab vs. Research Jailbreak Frameworks
+#### 2. AgentSec vs. Research Jailbreak Frameworks
 
-| Dimension | AgentSec Lab | garak | PyRIT | Promptfoo |
+| Dimension | AgentSec | garak | PyRIT | Promptfoo |
 | :--- | :--- | :--- | :--- | :--- |
 | **Language & Size** | **Rust (single dependency-free binary)** | Python (large dependency tree) | Python (enterprise SDK) | Node.js (npm dependency) |
 | **Execution Mode** | **Non-interactive / CI-Native** | Interactive CLI | Interactive Python scripts | CLI + web portal |
@@ -164,8 +164,8 @@ agentsec ci
 
 ### 1. Clone
 ```bash
-git clone https://github.com/Teycir/AgentSecLab.git
-cd AgentSecLab
+git clone https://github.com/Teycir/AgentSec.git
+cd AgentSec
 ```
 
 ### 2. Compile & Run
@@ -180,14 +180,14 @@ cargo build --release
 
 ## 🌟 The Core Vision
 
-Prompt engineering and autonomous tool execution are software interfaces. If they are software interfaces, they require automated validation. AgentSec Lab brings standard DevSecOps hygiene (baselines, JUnit, SARIF, and exit codes) to LLM architectures:
+Prompt engineering and autonomous tool execution are software interfaces. If they are software interfaces, they require automated validation. AgentSec brings standard DevSecOps hygiene (baselines, JUnit, SARIF, and exit codes) to LLM architectures:
 
 ```text
        [ CI/CD Pipeline / git commit ]
                       │
                       ▼
         =============================
-        │       AGENTSEC CLI        │
+        │        AGENTSEC CLI        │
         │  Config: agentsec.yml      │
         =============================
          /            │            \
@@ -224,7 +224,7 @@ Prompt engineering and autonomous tool execution are software interfaces. If the
 
 ## 🏗️ System Architecture
 
-AgentSec Lab is engineered to run quickly and protect data privacy, executing scans using a modular pipeline:
+AgentSec is engineered to run quickly and protect data privacy, executing scans using a modular pipeline:
 
 ```mermaid
 graph TD
@@ -292,7 +292,7 @@ Running suite Data Leakage Basic against target supportbot-api...
 Reports generated in 'reports/agentsec' directory.
 
 ==================================================
-             AGENTSEC LAB RUN SUMMARY
+              AGENTSEC RUN SUMMARY
 ==================================================
 Project:       supportbot
 Run ID:        4a9fd00e-bc21-4f10-bf9d-f6f3be6a1132
@@ -404,7 +404,7 @@ jobs:
         env:
           AGENTSEC_API_KEY: ${{ secrets.AGENTSEC_API_KEY }}
         run: |
-          cargo install agentsec-lab
+          cargo install --path crates/agentsec-cli
           agentsec ci --config agentsec.yml --out reports/agentsec --format sarif,json,junit,markdown --fail-on high
 
       - name: Upload SARIF report
@@ -422,7 +422,7 @@ agentsec:
   variables:
     AGENTSEC_API_KEY: $AGENTSEC_API_KEY
   script:
-    - cargo install agentsec-lab
+    - cargo install --path crates/agentsec-cli
     - agentsec ci --config agentsec.yml --out reports/agentsec --format json,junit,markdown --fail-on high
   artifacts:
     when: always
@@ -443,7 +443,7 @@ pipeline {
     stage('Run AgentSec') {
       steps {
         sh '''
-          cargo install agentsec-lab
+          cargo install --path crates/agentsec-cli
           agentsec ci --config agentsec.yml --out reports/agentsec --format json,junit,markdown --fail-on high
         '''
       }
@@ -462,7 +462,7 @@ pipeline {
 
 ## 🗺️ Roadmap & Release Phases
 
-We are actively developing AgentSec Lab. Below are the key milestones on our roadmap to build a premium, developer-first AI security platform:
+We are actively developing AgentSec. Below are the key milestones on our roadmap to build a premium, developer-first AI security platform:
 
 ### 🟢 Phase 1: Core CLI & CI/CD Native (Current)
 *   **Pure Rust CLI Workspace:** Unified Cargo package architecture for easy compilation and dependency integration.
@@ -486,11 +486,12 @@ We are actively developing AgentSec Lab. Below are the key milestones on our roa
 ## 📂 Repository Anatomy
 
 ```text
-agentsec-lab/
+agentsec/
 ├── .github/
 │   └── workflows/
 │       └── ci.yml            # Rust Quality Gates (fmt, clippy, test)
 ├── crates/
+│   ├── agentsec/             # Unified wrapper crate re-exporting modules
 │   ├── agentsec-cli/         # CLI commands and entry point
 │   ├── agentsec-core/        # Shared domain types (Finding, Severity, ExitCode)
 │   ├── agentsec-config/      # Config and suite parser / validator
@@ -510,8 +511,7 @@ agentsec-lab/
 │   ├── output-handling-basic.yml
 │   ├── prompt-injection-basic.yml
 │   └── system-prompt-leakage-basic.yml
-├── Cargo.toml
-└── Spec.md                   # Full product implementation spec
+└── Cargo.toml
 ```
 
 ---

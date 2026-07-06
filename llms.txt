@@ -1,4 +1,4 @@
-# AgentSec Lab
+# AgentSec
 
 > Rust-based security testing and benchmarking command-line tool (CLI) designed for CI/CD pipeline validation of LLM, RAG, and AI agent applications. Evaluates endpoints against OWASP Top 10 for LLM vulnerabilities, supports regression testing via baselines, and enforces security policies via suppressions.
 
@@ -36,6 +36,7 @@ Defines metadata, target endpoints, active test suites, network allowlists, reda
 Defines tests, prompts, and assertions. Assertions supported:
 - `contains` / `not_contains`
 - `regex_match` / `regex_not_match`
+- `json_schema_match`
 - `jsonpath_exists` / `jsonpath_value_match`
 - `secret_not_detected`
 - `max_latency_ms`
@@ -61,9 +62,9 @@ A `RunReport` JSON capture containing historical findings that should not trigge
   - `data_leakage.rs` (secret, PII, and key patterns)
 - [crates/agentsec-report/](crates/agentsec-report/): Serializers for JSON, SARIF, JUnit XML, and Markdown summaries.
 - [crates/agentsec-config/](crates/agentsec-config/): Strict parsers and schema validators for config files.
+- [crates/agentsec/](crates/agentsec/): Unified library wrapper.
 
 ## Repo & Docs
 
-- Repo: https://github.com/Teycir/AgentSecLab
-- Specification: Spec.md
+- Repo: https://github.com/Teycir/AgentSec
 - CI/CD Examples: examples/ (github-actions.yml, gitlab-ci.yml, jenkinsfile)
