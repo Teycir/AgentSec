@@ -1,4 +1,5 @@
 use agentsec_config::Assertion;
+use serde_json::Value;
 
 use crate::response::TargetResponse;
 
@@ -65,6 +66,18 @@ pub fn evaluate(assertion: &Assertion, response: &TargetResponse) -> AssertionRe
             AssertionResult {
                 passed,
                 description: format!("JSON path {path} should not exist in response"),
+            }
+        }
+        Assertion::JsonSchemaMatch { schema } => {
+            match validate_json_schema(&response.answer, schema) {
+                Ok(_) => AssertionResult {
+                    passed: true,
+                    description: "response should match JSON Schema".to_string(),
+                },
+                Err(e) => AssertionResult {
+                    passed: false,
+                    description: format!("response failed JSON Schema validation: {}", e),
+                },
             }
         }
         Assertion::MaxLength { value } => {
@@ -138,4 +151,113 @@ fn json_path_exists(response: &TargetResponse, path: &str) -> bool {
         }
     }
     true
+}
+
+fn validate_json_schema(json_str: &str, schema_str: &str) -> Result<(), String> {
+    let value: Value =
+        serde_json::from_str(json_str).map_err(|e| format!("response is not valid JSON: {}", e))?;
+    let schema: Value =
+        serde_json::from_str(schema_str).map_err(|e| format!("invalid schema JSON: {}", e))?;
+    validate_json_schema_value(&value, &schema)
+}
+
+fn validate_json_schema_value(value: &Value, schema: &Value) -> Result<(), String> {
+    if let Some(expected_type) = schema.get("type").and_then(|t| t.as_str()) {
+        match expected_type {
+            "object" => {
+                if !value.is_object() {
+                    return Err("expected an object".to_string());
+                }
+                if let Some(required) = schema.get("required").and_then(|r| r.as_array()) {
+                    for req in required {
+                        if let Some(key) = req.as_str() {
+                            if value.get(key).is_none() {
+                                return Err(format!("missing required property '{}'", key));
+                            }
+                        }
+                    }
+                }
+                if let Some(properties) = schema.get("properties").and_then(|p| p.as_object()) {
+                    for (key, prop_schema) in properties {
+                        if let Some(prop_value) = value.get(key) {
+                            if let Err(e) = validate_json_schema_value(prop_value, prop_schema) {
+                                return Err(format!("property '{}': {}", key, e));
+                            }
+                        }
+                    }
+                }
+            }
+            "array" => {
+                if !value.is_array() {
+                    return Err("expected an array".to_string());
+                }
+                if let Some(items) = schema.get("items") {
+                    if let Some(arr) = value.as_array() {
+                        for (idx, item) in arr.iter().enumerate() {
+                            if let Err(e) = validate_json_schema_value(item, items) {
+                                return Err(format!("array item at index {}: {}", idx, e));
+                            }
+                        }
+                    }
+                }
+            }
+            "string" => {
+                if !value.is_string() {
+                    return Err("expected a string".to_string());
+                }
+            }
+            "number" => {
+                if !value.is_number() {
+                    return Err("expected a number".to_string());
+                }
+            }
+            "boolean" => {
+                if !value.is_boolean() {
+                    return Err("expected a boolean".to_string());
+                }
+            }
+            other => return Err(format!("unsupported schema type '{}'", other)),
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_validate_json_schema() {
+        let schema = r#"{
+            "type": "object",
+            "required": ["status", "code"],
+            "properties": {
+                "status": { "type": "string" },
+                "code": { "type": "number" },
+                "tags": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                }
+            }
+        }"#;
+
+        // Valid JSON
+        let valid_json = r#"{"status": "success", "code": 200, "tags": ["prod", "v1"]}"#;
+        assert!(validate_json_schema(valid_json, schema).is_ok());
+
+        // Missing required property "code"
+        let missing_code = r#"{"status": "success"}"#;
+        let err = validate_json_schema(missing_code, schema).unwrap_err();
+        assert!(err.contains("missing required property 'code'"));
+
+        // Invalid property type (code is string instead of number)
+        let invalid_type = r#"{"status": "success", "code": "200"}"#;
+        let err = validate_json_schema(invalid_type, schema).unwrap_err();
+        assert!(err.contains("property 'code': expected a number"));
+
+        // Malformed JSON response
+        let malformed = r#"{"status": "#;
+        let err = validate_json_schema(malformed, schema).unwrap_err();
+        assert!(err.contains("response is not valid JSON"));
+    }
 }
