@@ -95,6 +95,7 @@ AgentSec Lab's core value is that it translates LLM vulnerability scans into sta
     - [GitHub Actions](#github-actions)
     - [GitLab CI](#gitlab-ci)
     - [Jenkins Pipeline](#jenkins-pipeline)
+  - [🗺️ Roadmap & Release Phases](#️-roadmap--release-phases)
   - [📂 Repository Anatomy](#-repository-anatomy)
   - [📜 Principles](#-principles)
   - [Support Development](#support-development)
@@ -140,17 +141,20 @@ AI and LLM wrappers introduce dynamic, non-deterministic behaviors that conventi
 
 ## ⏱️ Quickstart in 30 Seconds
 
-Enforce security testing in your project in three commands:
+Enforce security testing in your project in four steps:
 
 ```bash
-# 1. Initialize a default configuration
+# 1. Install AgentSec CLI globally using Cargo (pure Rust)
+cargo install --path crates/agentsec-cli
+
+# 2. Initialize a default configuration
 agentsec init --type http-chat
 
-# 2. Set your environment API key and validate configuration
+# 3. Set your environment API key and validate configuration
 export AGENTSEC_API_KEY="your-secret-key"
 agentsec validate
 
-# 3. Run the scan pipeline
+# 4. Run the scan pipeline
 agentsec ci
 ```
 
@@ -453,6 +457,29 @@ pipeline {
   }
 }
 ```
+
+---
+
+## 🗺️ Roadmap & Release Phases
+
+We are actively developing AgentSec Lab. Below are the key milestones on our roadmap to build a premium, developer-first AI security platform:
+
+### 🟢 Phase 1: Core CLI & CI/CD Native (Current)
+*   **Pure Rust CLI Workspace:** Unified Cargo package architecture for easy compilation and dependency integration.
+*   **Static Scanning Engine:** Prompt injection canary overrides, system prompt leakage regex, data masking, and output rendering validation.
+*   **Durable State Policies:** Support for stateful baselines (`--baseline`) and time-bound suppressions (`suppressions.yml`).
+*   **Standard CI/CD Reports:** Native SARIF, JUnit, and JSON output formats.
+
+### 🟡 Phase 2: Runtime Guardrails & Live Testing (Q3 2026)
+*   **🧬 Generative Adversarial Fuzzing:** Integrates a secondary attacker LLM mutator loop (Ollama/OpenAI) to generate context-specific jailbreak attempts dynamically.
+*   **📚 RAG Context Poisoning Simulator:** Native mock vector DB connectors to insert poisoned search inputs and verify output security.
+*   **💰 Cost & Loop Exhaustion Protection:** Monitors tokens, TTFT, and recursive execution loops to block model Denial-of-Service (DoS).
+*   **🧩 Structured Output Auditing:** Validates tool call parameters for schema violations and command injections.
+
+### 🔴 Phase 3: Developer Platform & Visual TUI (Q4 2026)
+*   **📊 Interactive CLI TUI Dashboard:** Real-time visual progress rendering of test executions inside the console.
+*   **🔌 Provider Adapters:** Native configuration templates for Gemini, Claude, and Bedrock.
+*   **🌐 Local Web Dashboard & Sandbox:** An offline axum-powered visual playground to experiment with prompt mitigations and immediately check vulnerability checks.
 
 ---
 
