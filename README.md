@@ -8,6 +8,9 @@
 
 **Why not just run manual red teaming?** Manual penetration testing of LLM applications is slow, hard to automate, and doesn't scale with daily prompt adjustments, RAG chunking updates, or new tool definitions. AgentSec Lab allows you to run repeatable security scans, establish baselines, enforce suppressions, and fail builds on security regressions directly within your CI/CD pipelines. [Full comparison ↓](#2-agentsec-lab-vs-research-jailbreak-frameworks)
 
+> [!NOTE]
+> **For AI Agents & LLM coding assistants:** We ship a machine-readable [`llms.txt`](llms.txt) file at the root of the repository. You can read it directly to understand the full CLI architecture, subcommand surface, code mapping, and exit codes of the project in a single token-efficient pass.
+
 ---
 
 <details>

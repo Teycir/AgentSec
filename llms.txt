@@ -1,0 +1,69 @@
+# AgentSec Lab
+
+> Rust-based security testing and benchmarking command-line tool (CLI) designed for CI/CD pipeline validation of LLM, RAG, and AI agent applications. Evaluates endpoints against OWASP Top 10 for LLM vulnerabilities, supports regression testing via baselines, and enforces security policies via suppressions.
+
+## Core Capabilities
+
+- **Automated Scanning:** Run suite assertions against targets to detect prompt injection, system prompt leakage, insecure output rendering, and data leakage.
+- **CI/CD Integration:** Non-interactive execution with deterministic exit codes and standardized test reports (JSON, SARIF, JUnit, Markdown).
+- **Private by Default:** Local-first scanning with automatic regex-based redaction of PII, API keys, JWTs, and secrets in reports.
+- **Network Safety Gates:** Enforces host allowlists and blocks private network resolutions to prevent SSRF and internal data exfiltration.
+- **Accepted Risk Management:** Supports stateful baselines (`--baseline`) and time-bound suppressions (`suppressions.yml`).
+
+## CLI Subcommands
+
+- `init`: Generates starter configurations. Option: `--type <http-chat | openai-compatible | rag | agent>`
+- `validate`: Parses and validates the structural syntax of `agentsec.yml` and checks environment variable presence without sending network requests.
+- `ci`: Runs all target/suite pairs, writes reports, and fails on security violations. Supports `--baseline <PATH>`, `--update-baseline`, and `--fail-on <severity>`.
+- `scan`: Ad-hoc scanner for a single target and suite. Supports `--target <URL>`, `--suite <ID>`, and `--timeout <SECONDS>`.
+- `version`: Prints binary version.
+
+## Exit Codes
+
+- `0`: Success (no active findings exceeding threshold, no errors).
+- `1`: Scan failed (vulnerabilities found exceeding threshold).
+- `2`: Network policy violation (resolved IP belongs to private subnet or host is not allowlisted).
+- `3`: Invalid configuration (malformed configuration or suite YAML).
+- `4`: Network error (connection timeout or target server unreachable).
+- `5`: Expired suppressions found (when configured to fail).
+
+## File Layout & Formats
+
+### Project Configuration (`agentsec.yml`)
+Defines metadata, target endpoints, active test suites, network allowlists, redaction policies, and reporting outputs.
+
+### Test Suites (`suites/*.yml`)
+Defines tests, prompts, and assertions. Assertions supported:
+- `contains` / `not_contains`
+- `regex_match` / `regex_not_match`
+- `jsonpath_exists` / `jsonpath_value_match`
+- `secret_not_detected`
+- `max_latency_ms`
+
+### Suppressions (`.agentsec/suppressions.yml`)
+Registers bypasses for specific findings:
+- `finding_id`
+- `reason`
+- `expires` (YYYY-MM-DD)
+- `approved_by`
+
+### Baselines (`.agentsec/baselines/main.json`)
+A `RunReport` JSON capture containing historical findings that should not trigger build failures.
+
+## Codebase Map
+
+- [crates/agentsec-cli/src/main.rs](crates/agentsec-cli/src/main.rs): Entry point, argument parsing, pipeline orchestration, suppressions/baselines logic.
+- [crates/agentsec-runner/src/engine.rs](crates/agentsec-runner/src/engine.rs): Request loop, target executors, and built-in scanner invocation.
+- [crates/agentsec-scanners/](crates/agentsec-scanners/): Built-in detectors:
+  - `prompt_injection.rs` (canary overrides verification)
+  - `system_prompt_leakage.rs` (leakage phrase patterns)
+  - `output_handling.rs` (safe rendering, hidden text, exfil links)
+  - `data_leakage.rs` (secret, PII, and key patterns)
+- [crates/agentsec-report/](crates/agentsec-report/): Serializers for JSON, SARIF, JUnit XML, and Markdown summaries.
+- [crates/agentsec-config/](crates/agentsec-config/): Strict parsers and schema validators for config files.
+
+## Repo & Docs
+
+- Repo: https://github.com/Teycir/AgentSecLab
+- Specification: Spec.md
+- CI/CD Examples: examples/ (github-actions.yml, gitlab-ci.yml, jenkinsfile)
