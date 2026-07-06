@@ -1,0 +1,43 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/agentsec-cli",
+    "crates/agentsec-core",
+    "crates/agentsec-config",
+    "crates/agentsec-runner",
+    "crates/agentsec-scanners",
+    "crates/agentsec-report",
+    "crates/agentsec-integrations",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/agentsec/agentsec-lab"
+
+[workspace.dependencies]
+agentsec-core = { path = "crates/agentsec-core" }
+agentsec-config = { path = "crates/agentsec-config" }
+agentsec-runner = { path = "crates/agentsec-runner" }
+agentsec-scanners = { path = "crates/agentsec-scanners" }
+agentsec-report = { path = "crates/agentsec-report" }
+agentsec-integrations = { path = "crates/agentsec-integrations" }
+
+clap = { version = "4", features = ["derive", "env"] }
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
+anyhow = "1"
+thiserror = "1"
+console = "0.15"
+indicatif = "0.17"
+owo-colors = "4"
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+regex = "1"
+quick-xml = { version = "0.36", features = ["serialize"] }
+walkdir = "2"
+jsonpath-rust = "0.5"
