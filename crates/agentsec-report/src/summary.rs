@@ -35,6 +35,7 @@ impl RunReport {
     /// Builds a report from a completed run's findings, computing the
     /// summary counts. `total_tests_run` is passed in separately since it
     /// includes passing tests, which don't otherwise appear here.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         run_id: impl Into<String>,
         project_name: impl Into<String>,

@@ -117,15 +117,13 @@ suppressions:
                 "data-leakage-basic".to_string(),
             ];
             if let Ok(entries) = std::fs::read_dir("suites") {
-                for entry in entries {
-                    if let Ok(entry) = entry {
-                        let path = entry.path();
-                        if path.is_file() {
-                            if let Some(ext) = path.extension() {
-                                if ext == "yml" || ext == "yaml" {
-                                    if let Some(stem) = path.file_stem() {
-                                        known_suite_ids.push(stem.to_string_lossy().to_string());
-                                    }
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if path.is_file() {
+                        if let Some(ext) = path.extension() {
+                            if ext == "yml" || ext == "yaml" {
+                                if let Some(stem) = path.file_stem() {
+                                    known_suite_ids.push(stem.to_string_lossy().to_string());
                                 }
                             }
                         }
@@ -350,12 +348,12 @@ fn load_suite(suite_id: &str) -> anyhow::Result<Suite> {
 }
 
 fn validate_env_vars(config: &ProjectConfig, errors: &mut Vec<agentsec_config::ValidationError>) {
+    let pattern = regex::Regex::new(r"\$\{([A-Za-z0-9_]+)\}").unwrap();
     for target in &config.targets {
         match &target.kind {
             agentsec_config::target::TargetKind::HttpChat {
                 base_url, request, ..
             } => {
-                let pattern = regex::Regex::new(r"\$\{([A-Za-z0-9_]+)\}").unwrap();
                 let mut check_str = |s: &str| {
                     for cap in pattern.captures_iter(s) {
                         let var = &cap[1];
@@ -370,7 +368,7 @@ fn validate_env_vars(config: &ProjectConfig, errors: &mut Vec<agentsec_config::V
 
                 check_str(base_url);
                 check_str(&request.path);
-                for (_, val) in &request.headers {
+                for val in request.headers.values() {
                     check_str(val);
                 }
                 let body_str = request.body.to_string();
@@ -512,7 +510,7 @@ async fn run_scan_pipeline(
     // 3. Load Baseline
     let baseline_path = baseline_opt
         .as_ref()
-        .map(|b| Path::new(b))
+        .map(Path::new)
         .or_else(|| config.baseline.as_ref().map(|b| Path::new(&b.file)));
     let mut baseline_keys = HashSet::new();
     if let Some(path) = baseline_path {
@@ -681,7 +679,7 @@ async fn run_scan_pipeline(
     let fail_on_str = fail_on_opt.unwrap_or(config.ci.fail_on);
     let mut findings_exceeded = false;
 
-    if fail_on_str.to_ascii_lowercase() != "never" {
+    if !fail_on_str.eq_ignore_ascii_case("never") {
         if let Some(fail_on_severity) = Severity::parse_threshold(&fail_on_str) {
             for finding in &run_report.findings {
                 let unique_key = format!(

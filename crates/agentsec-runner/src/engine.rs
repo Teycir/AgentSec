@@ -48,7 +48,7 @@ pub async fn run_suite(
             run_id,
             &target.id,
             suite,
-            &response_for,
+            response_for,
         ));
     result
         .findings
@@ -56,7 +56,7 @@ pub async fn run_suite(
             run_id,
             &target.id,
             suite,
-            &response_for,
+            response_for,
         ));
     result
         .findings
@@ -64,16 +64,11 @@ pub async fn run_suite(
             run_id,
             &target.id,
             suite,
-            &response_for,
+            response_for,
         ));
     result
         .findings
-        .extend(agentsec_scanners::DataLeakageScanner.run(
-            run_id,
-            &target.id,
-            suite,
-            &response_for,
-        ));
+        .extend(agentsec_scanners::DataLeakageScanner.run(run_id, &target.id, suite, response_for));
 
     let scanner_categories = [
         "prompt_injection",
