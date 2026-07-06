@@ -33,10 +33,53 @@ pub fn redact_headers(
 /// Redacts a single string value, keeping a short prefix visible.
 ///
 /// `sk-live-1234567890abcdef` -> `sk-live-****************` (spec 14.6 example).
+///
+/// For long secrets this keeps up to 8 characters visible, matching common
+/// key-display conventions (GitHub/Stripe). For short secrets, 8 fixed
+/// visible characters could reveal most or all of the value (e.g. a 10-char
+/// internal token), so the visible prefix scales down to at most half the
+/// value's length.
 pub fn redact_value(value: &str) -> String {
     let char_count = value.chars().count();
-    let visible = char_count.min(8);
+    let visible = char_count.min(8).min(char_count / 2);
     let prefix: String = value.chars().take(visible).collect();
     let masked_len = char_count.saturating_sub(visible);
     format!("{prefix}{}", "*".repeat(masked_len))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn long_secret_keeps_8_char_prefix() {
+        let redacted = redact_value("sk-live-1234567890abcdef");
+        assert_eq!(redacted, "sk-live-****************");
+        assert!(redacted.starts_with("sk-live-"));
+    }
+
+    #[test]
+    fn short_secret_does_not_reveal_most_of_itself() {
+        // A 10-char token: fixed-8 previously left only 2 chars masked.
+        let redacted = redact_value("abcdefghij");
+        assert_eq!(redacted, "abcde*****");
+        let visible_len = redacted.chars().filter(|c| *c != '*').count();
+        assert!(visible_len <= redacted.chars().count() / 2);
+    }
+
+    #[test]
+    fn very_short_secret_is_mostly_masked() {
+        let redacted = redact_value("abcd");
+        assert_eq!(redacted, "ab**");
+    }
+
+    #[test]
+    fn empty_value_stays_empty() {
+        assert_eq!(redact_value(""), "");
+    }
+
+    #[test]
+    fn single_char_value_is_fully_masked() {
+        assert_eq!(redact_value("a"), "*");
+    }
 }

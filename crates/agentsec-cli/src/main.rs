@@ -238,6 +238,19 @@ suppressions:
             let project_config = if config_path.exists() {
                 ProjectConfig::load(config_path)?
             } else {
+                // No agentsec.yml means the user hasn't opted into any network
+                // policy at all. Default to the SAFE posture for this ad-hoc
+                // path specifically: deny private/loopback/link-local targets
+                // (e.g. cloud metadata endpoints) unless they explicitly pass
+                // a config that opts back out. This does not change the
+                // NetworkSettings::default() used when a config file *is*
+                // present but omits `network:`, to avoid silently changing
+                // behavior for existing configs.
+                eprintln!(
+                    "{}: no agentsec.yml found; running ad-hoc scan with deny_private_networks=true. \
+                     Use a config file to target private/internal hosts intentionally.",
+                    "Warning".yellow().bold()
+                );
                 ProjectConfig {
                     version: "1".to_string(),
                     project: agentsec_config::project::ProjectMeta {
@@ -250,7 +263,10 @@ suppressions:
                     ci: agentsec_config::project::CiSettings::default(),
                     reports: agentsec_config::project::ReportSettings::default(),
                     redaction: agentsec_config::project::RedactionSettings::default(),
-                    network: agentsec_config::project::NetworkSettings::default(),
+                    network: agentsec_config::project::NetworkSettings {
+                        allowed_hosts: Vec::new(),
+                        deny_private_networks: true,
+                    },
                     evidence: agentsec_config::project::EvidenceSettings::default(),
                     safety: agentsec_config::project::SafetySettings::default(),
                     suppressions: None,
@@ -400,18 +416,38 @@ fn validate_env_vars(config: &ProjectConfig, errors: &mut Vec<agentsec_config::V
     }
 }
 
+/// Checks whether an IPv4 address falls in a private, loopback, unspecified,
+/// or link-local range. Link-local (169.254.0.0/16) specifically covers the
+/// AWS/GCP/Azure cloud-metadata endpoint (169.254.169.254), which this check
+/// previously missed entirely.
+fn is_private_ipv4(ipv4: std::net::Ipv4Addr) -> bool {
+    ipv4.is_loopback() || ipv4.is_private() || ipv4.is_unspecified() || ipv4.is_link_local()
+}
+
+/// Checks whether an IPv6 address is private/loopback/unspecified/unique-local,
+/// or an IPv4-mapped address (`::ffff:a.b.c.d`) whose embedded IPv4 address is
+/// itself private. Without the mapped-address check, a hostname resolving to
+/// `::ffff:169.254.169.254` or `::ffff:127.0.0.1` would bypass the gate.
+fn is_private_ipv6(ipv6: std::net::Ipv6Addr) -> bool {
+    if ipv6.is_loopback() || ipv6.is_unspecified() || ((ipv6.segments()[0] & 0xfe00) == 0xfc00) {
+        return true;
+    }
+    if let Some(mapped_v4) = ipv6.to_ipv4_mapped() {
+        return is_private_ipv4(mapped_v4);
+    }
+    false
+}
+
+fn is_private_ip_addr(ip: std::net::IpAddr) -> bool {
+    match ip {
+        std::net::IpAddr::V4(ipv4) => is_private_ipv4(ipv4),
+        std::net::IpAddr::V6(ipv6) => is_private_ipv6(ipv6),
+    }
+}
+
 fn is_private_ip(host: &str) -> bool {
     if let Ok(ip) = host.parse::<std::net::IpAddr>() {
-        match ip {
-            std::net::IpAddr::V4(ipv4) => {
-                ipv4.is_loopback() || ipv4.is_private() || ipv4.is_unspecified()
-            }
-            std::net::IpAddr::V6(ipv6) => {
-                ipv6.is_loopback()
-                    || ipv6.is_unspecified()
-                    || ((ipv6.segments()[0] & 0xfe00) == 0xfc00)
-            }
-        }
+        is_private_ip_addr(ip)
     } else {
         false
     }
@@ -423,18 +459,7 @@ async fn is_host_private(host: &str) -> bool {
     }
     if let Ok(addrs) = tokio::net::lookup_host(format!("{}:80", host)).await {
         for addr in addrs {
-            let ip = addr.ip();
-            let is_priv = match ip {
-                std::net::IpAddr::V4(ipv4) => {
-                    ipv4.is_loopback() || ipv4.is_private() || ipv4.is_unspecified()
-                }
-                std::net::IpAddr::V6(ipv6) => {
-                    ipv6.is_loopback()
-                        || ipv6.is_unspecified()
-                        || ((ipv6.segments()[0] & 0xfe00) == 0xfc00)
-                }
-            };
-            if is_priv {
+            if is_private_ip_addr(addr.ip()) {
                 return true;
             }
         }
@@ -563,11 +588,20 @@ async fn run_scan_pipeline(
             {
                 Ok(res) => {
                     for (test_id, err_msg) in res.errors {
+                        // Runtime/HTTP errors (e.g. reqwest failures) can embed the
+                        // full request URL, including query strings or an API key
+                        // placed in the URL rather than a header. Redact before
+                        // printing, mirroring the redaction applied to findings below.
+                        let safe_err_msg = if config.redaction.enabled {
+                            agentsec_scanners::data_leakage::redact_secrets_in_text(&err_msg)
+                        } else {
+                            err_msg
+                        };
                         eprintln!(
                             "{}: test '{}' failed to execute: {}",
                             "Error".red().bold(),
                             test_id,
-                            err_msg
+                            safe_err_msg
                         );
                     }
                     all_findings.extend(res.findings);
@@ -1049,3 +1083,74 @@ tests:
       Do not expose sensitive keys, tokens, or PII in prompts or model contexts.
       Redact logs and monitor outputs for secret leakage.
 "#;
+
+#[cfg(test)]
+mod network_policy_tests {
+    use super::*;
+
+    #[test]
+    fn detects_standard_private_ipv4_ranges() {
+        assert!(is_private_ip("127.0.0.1"));
+        assert!(is_private_ip("10.0.0.5"));
+        assert!(is_private_ip("192.168.1.1"));
+        assert!(is_private_ip("172.16.0.1"));
+        assert!(is_private_ip("0.0.0.0"));
+    }
+
+    #[test]
+    fn detects_cloud_metadata_link_local_ipv4() {
+        // The AWS/GCP/Azure metadata endpoint. This is the exact SSRF case
+        // the network policy check is meant to stop.
+        assert!(is_private_ip("169.254.169.254"));
+        assert!(is_private_ip("169.254.0.1"));
+    }
+
+    #[test]
+    fn allows_public_ipv4() {
+        assert!(!is_private_ip("8.8.8.8"));
+        assert!(!is_private_ip("1.1.1.1"));
+    }
+
+    #[test]
+    fn detects_standard_private_ipv6_ranges() {
+        assert!(is_private_ip("::1")); // loopback
+        assert!(is_private_ip("::")); // unspecified
+        assert!(is_private_ip("fd00::1")); // unique local (fc00::/7)
+        assert!(is_private_ip("fc00::1"));
+    }
+
+    #[test]
+    fn detects_ipv4_mapped_private_addresses() {
+        // ::ffff:127.0.0.1 and ::ffff:169.254.169.254 must not bypass the
+        // gate just because they're written in IPv6 form.
+        assert!(is_private_ip("::ffff:127.0.0.1"));
+        assert!(is_private_ip("::ffff:169.254.169.254"));
+        assert!(is_private_ip("::ffff:10.0.0.1"));
+        assert!(is_private_ip("::ffff:192.168.1.1"));
+    }
+
+    #[test]
+    fn allows_ipv4_mapped_public_addresses() {
+        assert!(!is_private_ip("::ffff:8.8.8.8"));
+    }
+
+    #[test]
+    fn allows_public_ipv6() {
+        assert!(!is_private_ip("2001:4860:4860::8888")); // Google public DNS
+    }
+
+    #[test]
+    fn non_ip_hostname_is_not_flagged_by_is_private_ip() {
+        // is_private_ip only handles literal IPs; DNS resolution is handled
+        // separately by is_host_private.
+        assert!(!is_private_ip("example.com"));
+        assert!(!is_private_ip("metadata.google.internal"));
+    }
+
+    #[tokio::test]
+    async fn is_host_private_detects_literal_private_ip_without_dns() {
+        assert!(is_host_private("169.254.169.254").await);
+        assert!(is_host_private("127.0.0.1").await);
+        assert!(is_host_private("::ffff:169.254.169.254").await);
+    }
+}
