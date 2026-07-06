@@ -59,6 +59,7 @@ pub enum Assertion {
     RegexNotMatch { pattern: String },
     JsonPathExists { path: String },
     JsonPathNotExists { path: String },
+    JsonSchemaMatch { schema: String },
     MaxLength { value: usize },
     MaxLatencyMs { value: u64 },
     ToolNotCalled { tool: String },

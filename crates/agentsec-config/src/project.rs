@@ -35,6 +35,8 @@ pub struct ProjectConfig {
     pub telemetry: TelemetrySettings,
     #[serde(default)]
     pub policies: Option<Policies>,
+    #[serde(default)]
+    pub limits: Option<LimitsSettings>,
 }
 
 impl ProjectConfig {
@@ -218,4 +220,12 @@ pub struct ToolCallPolicy {
     pub forbidden_tools: Vec<String>,
     #[serde(default)]
     pub require_human_approval: Vec<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct LimitsSettings {
+    #[serde(default)]
+    pub max_tokens_per_session: Option<usize>,
+    #[serde(default)]
+    pub max_latency_per_request_ms: Option<u64>,
 }
