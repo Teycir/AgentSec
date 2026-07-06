@@ -1,0 +1,34 @@
+pipeline {
+  agent any
+
+  environment {
+    AGENTSEC_API_KEY = credentials('agentsec-api-key')
+  }
+
+  stages {
+    stage('Install AgentSec') {
+      steps {
+        sh 'curl -sSL https://agentsec.dev/install.sh | sh'
+      }
+    }
+
+    stage('Run AgentSec') {
+      steps {
+        sh '''
+          agentsec ci \
+            --config agentsec.yml \
+            --out reports/agentsec \
+            --format json,junit,markdown \
+            --fail-on high
+        '''
+      }
+    }
+  }
+
+  post {
+    always {
+      archiveArtifacts artifacts: 'reports/agentsec/**', fingerprint: true
+      junit 'reports/agentsec/results.junit.xml'
+    }
+  }
+}

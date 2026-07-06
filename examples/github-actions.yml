@@ -1,0 +1,41 @@
+name: AgentSec
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  agentsec:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install AgentSec
+        run: |
+          curl -sSL https://agentsec.dev/install.sh | sh
+
+      - name: Run AgentSec
+        env:
+          AGENTSEC_API_KEY: ${{ secrets.AGENTSEC_API_KEY }}
+        run: |
+          agentsec ci \
+            --config agentsec.yml \
+            --out reports/agentsec \
+            --format sarif,json,junit,markdown \
+            --fail-on high
+
+      - name: Upload SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: reports/agentsec/results.sarif
+
+      - name: Upload AgentSec reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agentsec-reports
+          path: reports/agentsec

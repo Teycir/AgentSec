@@ -1,0 +1,31 @@
+id: reversec-dvla
+name: Damn Vulnerable LLM Agent (DVLA)
+repo: "https://github.com/ReversecLabs/damn-vulnerable-llm-agent"
+license: "Apache License 2.0"
+description: "A deliberately vulnerable chatbot powered by a LangChain ReAct agent, showing prompt injection vulnerabilities."
+runtime:
+  type: docker
+  dockerfile: "Dockerfile"
+  image_name: "reversec-dvla"
+  default_port: 8501
+healthcheck:
+  type: http
+  url: "http://localhost:8501"
+  timeout_seconds: 60
+target:
+  type: http-chat
+  base_url: "http://localhost:8501"
+  request:
+    method: POST
+    path: "/chat"
+    body:
+      message: "{{ input }}"
+  response:
+    answer_json_path: "$.answer"
+categories:
+  - prompt_injection
+  - react_agent
+owasp:
+  - LLM01
+default_suites:
+  - prompt-injection-basic

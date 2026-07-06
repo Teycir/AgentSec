@@ -1,0 +1,33 @@
+id: damn-vulnerable-ai-agent
+name: Damn Vulnerable AI Agent
+repo: "https://github.com/opena2a-org/damn-vulnerable-ai-agent"
+license: "MIT"
+description: "A comprehensive, deliberately vulnerable AI agent platform designed for security training, red-teaming, and benchmarking."
+runtime:
+  type: docker-compose
+  compose_file: "docker-compose.yml"
+  service: "dvaa"
+  default_port: 9000
+healthcheck:
+  type: http
+  url: "http://localhost:9000"
+  timeout_seconds: 60
+target:
+  type: http-chat
+  base_url: "http://localhost:9000"
+  request:
+    method: POST
+    path: "/api/chat"
+    body:
+      message: "{{ input }}"
+  response:
+    answer_json_path: "$.answer"
+categories:
+  - prompt_injection
+  - agent_tool
+owasp:
+  - LLM01
+  - LLM06
+default_suites:
+  - agent-tool-basic
+  - prompt-injection-basic

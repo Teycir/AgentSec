@@ -1,0 +1,14 @@
+agentsec:
+  stage: test
+  image: rust:latest
+  variables:
+    AGENTSEC_API_KEY: $AGENTSEC_API_KEY
+  script:
+    - cargo install agentsec-lab
+    - agentsec ci --config agentsec.yml --out reports/agentsec --format json,junit,markdown --fail-on high
+  artifacts:
+    when: always
+    paths:
+      - reports/agentsec
+    reports:
+      junit: reports/agentsec/results.junit.xml

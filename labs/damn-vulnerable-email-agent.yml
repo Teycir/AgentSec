@@ -1,0 +1,31 @@
+id: damn-vulnerable-email-agent
+name: Damn Vulnerable Email Agent
+repo: "https://github.com/kyuz0/damn-vulnerable-email-agent"
+license: "See upstream repository"
+description: "An educational project designed to practice and understand indirect prompt injection attacks in ReAct-based AI agents."
+runtime:
+  type: docker
+  dockerfile: "Dockerfile"
+  image_name: "damn-vulnerable-email-agent"
+  default_port: 8080
+healthcheck:
+  type: http
+  url: "http://localhost:8080"
+  timeout_seconds: 60
+target:
+  type: http-chat
+  base_url: "http://localhost:8080"
+  request:
+    method: POST
+    path: "/chat"
+    body:
+      message: "{{ input }}"
+  response:
+    answer_json_path: "$.answer"
+categories:
+  - prompt_injection
+  - indirect_injection
+owasp:
+  - LLM01
+default_suites:
+  - prompt-injection-basic
