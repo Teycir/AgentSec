@@ -4,6 +4,7 @@ reports/
 .env
 .env.*
 .gif-build/
+.demo-workspace/
 
 # Local lab targets (spec section 6.3 / labs/*.yml): full external repo
 # clones used to manually exercise `agentsec scan` against a running lab,

@@ -12,16 +12,19 @@ healthcheck:
   type: http
   url: "http://localhost:9000"
   timeout_seconds: 60
+# Targets HelperBot (port 7002, "Weak" security: prompt injection, data
+# leaks, context manipulation per the DVAA README's agent table) rather
+# than the :9000 dashboard, which serves the SPA UI, not a chat API.
 target:
   type: http-chat
-  base_url: "http://localhost:9000"
+  base_url: "http://localhost:7002"
   request:
     method: POST
-    path: "/api/chat"
+    path: "/chat"
     body:
       message: "{{ input }}"
   response:
-    answer_json_path: "$.answer"
+    answer_json_path: "$.response"
 categories:
   - prompt_injection
   - agent_tool
@@ -31,3 +34,8 @@ owasp:
 default_suites:
   - agent-tool-basic
   - prompt-injection-basic
+# The built-in canary-based suites above need an app-specific canary string
+# configured in the target's own system prompt to detect reliably; against
+# this out-of-the-box target with no canary, see the target-specific demo
+# suite instead, tailored to HelperBot's actual observed leak/injection
+# behavior: labs/damn-vulnerable-ai-agent-demo-suite.yml
