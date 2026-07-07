@@ -144,17 +144,23 @@ AI and LLM wrappers introduce dynamic, non-deterministic behaviors that conventi
 
 ## ⏱️ Quickstart in 30 Seconds
 
-Enforce security testing in your project in four steps:
+Enforce security testing in your project in four steps. This uses a
+local [Ollama](https://ollama.com/) model as the target — no external
+service, nothing to sign up for:
 
 ```bash
 # 1. Install AgentSec CLI globally using Cargo (pure Rust)
 cargo install --path crates/agentsec-cli
 
-# 2. Initialize a default configuration
-agentsec init --type http-chat
+# 2. Initialize a default configuration, then point it at local Ollama
+agentsec init --type openai-compatible
+# Edit agentsec.yml: set base_url to "http://localhost:11434/v1" and
+# model to a model you've pulled (e.g. "gemma4:latest").
 
-# 3. Set your environment API key and validate configuration
-export AGENTSEC_API_KEY="your-secret-key"
+# 3. Set a dummy API key and validate configuration
+# (AgentSec always sends an Authorization header; Ollama itself
+# ignores it locally, but the env var must still be set.)
+export AGENTSEC_API_KEY="not-checked-by-ollama"
 agentsec validate
 
 # 4. Run the scan pipeline
