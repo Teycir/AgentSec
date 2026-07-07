@@ -4,3 +4,10 @@ reports/
 .env
 .env.*
 .gif-build/
+
+# Local lab targets (spec section 6.3 / labs/*.yml): full external repo
+# clones used to manually exercise `agentsec scan` against a running lab,
+# e.g. `git clone https://github.com/opena2a-org/damn-vulnerable-ai-agent
+# External/damn-vulnerable-ai-agent`. Never committed — recreate from the
+# repo URL declared in the matching labs/<id>.yml manifest.
+External/
