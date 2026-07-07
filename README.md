@@ -238,7 +238,7 @@ AgentSec is engineered to run quickly and protect data privacy, executing scans 
 ```mermaid
 graph TD
     subgraph CI_Pipeline["CI/CD Runner"]
-        Command[🖥️ CLI: agentsec ci / scan]
+        Command[🖥️ CLI: agentsec ci / scan / plugin run]
     end
 
     subgraph Config["Configuration"]
@@ -249,18 +249,26 @@ graph TD
 
     subgraph Core["Execution Core"]
         NetGate[🛡️ Network Control allowed-hosts / private-IP check]
-        Executor[🔌 Target Executor HTTP / OpenAI]
+        Executor[🔌 Target Executor HTTP / OpenAI-compatible / Lab]
     end
 
     subgraph Target_App["Target App"]
-        LLM[🤖 LLM / RAG Endpoint]
+        LLM[🤖 LLM / RAG / Agent Endpoint]
     end
 
     subgraph Scanners["Built-in Scanners"]
         ScanInj[Prompt Injection Scanner]
         ScanSys[System Leakage Scanner]
+        ScanRag[RAG Scanner]
+        ScanAgent[Agent Tool Scanner]
         ScanOut[Output Handling Scanner]
         ScanData[Data Leakage Scanner]
+    end
+
+    subgraph Plugins["Plugin Adapters (spec 21)"]
+        PluginProto[🔌 Subprocess JSON protocol]
+        PluginPromptfoo[Promptfoo bridge]
+        PluginOther[garak / PyRIT / other]
     end
 
     subgraph Formatting["Report Formatter"]
@@ -268,6 +276,7 @@ graph TD
         SARIF[results.sarif]
         JUNIT[results.junit.xml]
         MD[summary.md]
+        HTML[report.html]
     end
 
     Command --> AYML
@@ -276,14 +285,20 @@ graph TD
     Executor --> LLM
     LLM --> Executor
     Executor --> Scanners
+    Executor -.-> PluginProto
+    PluginProto --> PluginPromptfoo
+    PluginProto --> PluginOther
     Scanners --> SUPP
     Scanners --> BASE
+    PluginProto --> SUPP
+    PluginProto --> BASE
     SUPP --> Formatting
     BASE --> Formatting
     Formatting --> JSON
     Formatting --> SARIF
     Formatting --> JUNIT
     Formatting --> MD
+    Formatting --> HTML
 ```
 
 ---
