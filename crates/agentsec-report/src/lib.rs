@@ -1,9 +1,10 @@
 //! agentsec-report: report generation (spec section 17).
 //!
-//! MVP v0.1 formats: JSON, Markdown, JUnit, and SARIF (SARIF is "strongly
-//! recommended" per spec 25, so it's included). HTML (17.5) is explicitly
-//! deferred per the MVP scope list.
+//! Formats: JSON, Markdown, JUnit, SARIF (SARIF is "strongly recommended"
+//! per spec 25), and HTML (spec 17.5) — a single self-contained static
+//! file for human review outside of CI.
 
+pub mod html;
 pub mod junit;
 pub mod markdown;
 pub mod sarif;
@@ -47,7 +48,10 @@ pub fn write_reports(
                 let path = output_dir.join("summary.md");
                 std::fs::write(path, markdown::to_markdown(report))?;
             }
-            // "html" is intentionally unsupported in the MVP (spec 25).
+            "html" => {
+                let path = output_dir.join("report.html");
+                std::fs::write(path, html::to_html(report))?;
+            }
             _ => {}
         }
     }
