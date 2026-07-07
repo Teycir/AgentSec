@@ -10,7 +10,7 @@ use crate::summary::RunReport;
 /// recommendation.
 pub fn to_markdown(report: &RunReport) -> String {
     let mut out = String::new();
-    out.push_str("# AgentSec Lab Summary\n\n");
+    out.push_str("# AgentSec Summary\n\n");
 
     for target_id in &report.target_ids {
         out.push_str(&format!("Target: `{target_id}`\n\n"));

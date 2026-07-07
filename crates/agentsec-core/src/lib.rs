@@ -1,4 +1,4 @@
-//! agentsec-core: shared domain types used across the AgentSec Lab workspace.
+//! agentsec-core: shared domain types used across the AgentSec workspace.
 //!
 //! Spec references:
 //! - Section 9  (Exit Codes)

@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
 
-/// AgentSec Lab — CI/CD-ready security testing for LLM, RAG, and agent apps.
+/// AgentSec — CI/CD-ready security testing for LLM, RAG, and agent apps.
 ///
 /// Spec section 8: CLI Specification.
 #[derive(Debug, Parser)]

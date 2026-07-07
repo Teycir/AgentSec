@@ -18,7 +18,7 @@ pub fn to_html(report: &RunReport) -> String {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AgentSec Lab Report — {run_id}</title>
+<title>AgentSec Report — {run_id}</title>
 <style>
 {css}
 </style>
@@ -300,7 +300,7 @@ fn render_body(report: &RunReport) -> String {
     out.push_str("<div class=\"report\">\n");
 
     out.push_str(&format!(
-        "<div class=\"header\">\n<h1>AgentSec Lab Report</h1>\n<div class=\"meta\">{project}<br>{finished}</div>\n</div>\n",
+        "<div class=\"header\">\n<h1>AgentSec Report</h1>\n<div class=\"meta\">{project}<br>{finished}</div>\n</div>\n",
         project = escape(&report.project_name),
         finished = escape(&report.finished_at.to_rfc3339()),
     ));

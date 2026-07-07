@@ -15,7 +15,7 @@ members = [
 version = "1.0.0"
 edition = "2021"
 license = "MIT"
-repository = "https://github.com/agentsec/agentsec-lab"
+repository = "https://github.com/Teycir/AgentSec"
 
 [workspace.dependencies]
 agentsec = { path = "crates/agentsec" }

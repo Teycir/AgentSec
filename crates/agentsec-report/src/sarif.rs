@@ -1,7 +1,7 @@
 use crate::RunReport;
 use serde_json::{json, Value};
 
-/// Converts a completed AgentSec Lab run report into a SARIF 2.1.0 JSON representation (spec section 17.2).
+/// Converts a completed AgentSec run report into a SARIF 2.1.0 JSON representation (spec section 17.2).
 pub fn to_sarif(report: &RunReport) -> Value {
     let mut rules = Vec::new();
     let mut rule_ids = std::collections::HashSet::new();
@@ -74,8 +74,8 @@ pub fn to_sarif(report: &RunReport) -> Value {
             {
                 "tool": {
                     "driver": {
-                        "name": "AgentSec Lab",
-                        "informationUri": "https://github.com/agentsec/agentsec-lab",
+                        "name": "AgentSec",
+                        "informationUri": "https://github.com/Teycir/AgentSec",
                         "rules": rules
                     }
                 },

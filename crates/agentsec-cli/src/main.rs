@@ -33,7 +33,7 @@ async fn main() {
 async fn run(args: Cli) -> anyhow::Result<ExitCode> {
     match args.command {
         Command::Version => {
-            println!("AgentSec Lab v{}", env!("CARGO_PKG_VERSION"));
+            println!("AgentSec v{}", env!("CARGO_PKG_VERSION"));
             Ok(ExitCode::Success)
         }
         Command::Init { r#type } => commands::init::run(r#type),

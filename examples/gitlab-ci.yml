@@ -4,7 +4,7 @@ agentsec:
   variables:
     AGENTSEC_API_KEY: $AGENTSEC_API_KEY
   script:
-    - cargo install agentsec-lab
+    - cargo install agentsec
     - agentsec ci --config agentsec.yml --out reports/agentsec --format json,junit,markdown --fail-on high
   artifacts:
     when: always

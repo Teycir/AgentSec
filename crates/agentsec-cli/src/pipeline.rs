@@ -377,7 +377,7 @@ fn print_terminal_summary(report: &RunReport, baseline_keys: &HashSet<String>) {
         "\n{}",
         "==================================================".green()
     );
-    println!("             AGENTSEC LAB RUN SUMMARY");
+    println!("                AGENTSEC RUN SUMMARY");
     println!(
         "{}",
         "==================================================".green()

@@ -293,7 +293,7 @@ Running suite System Prompt Leakage Basic against target helperbot...
 Reports generated in '.demo-workspace/reports/agentsec' directory.
 
 ==================================================
-              AGENTSEC LAB RUN SUMMARY
+               AGENTSEC RUN SUMMARY
 ==================================================
 Target:        helperbot
 Total Findings: 2

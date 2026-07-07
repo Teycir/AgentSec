@@ -19,9 +19,10 @@ whatever binary is named `promptfoo` on `PATH`.
 - A local [Ollama](https://ollama.com/) install with a chat model
   pulled (the bridge defaults to `gemma4:latest` — see
   `buildPromptfooConfig` in the bridge script to change it)
-- A running HTTP target to scan (e.g. `agentsec lab up
-  damn-vulnerable-ai-agent`, or any `http-chat` target from your own
-  `agentsec.yml`)
+- A running HTTP target to scan (e.g. a locally running clone of
+  [damn-vulnerable-ai-agent](https://github.com/WithSecureLabs/damn-vulnerable-ai-agent),
+  see `labs/damn-vulnerable-ai-agent.yml`, or any `http-chat` target
+  from your own `agentsec.yml`)
 
 ## Build
 
