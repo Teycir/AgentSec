@@ -374,7 +374,7 @@ fn render_findings(report: &RunReport) -> String {
     }
 
     // Worst-first, mirroring the spine and markdown.rs's ordering intent.
-    findings.sort_by(|a, b| b.severity.cmp(&a.severity));
+    findings.sort_by_key(|f| std::cmp::Reverse(f.severity));
 
     for finding in findings {
         out.push_str(&render_finding(finding));
