@@ -24,11 +24,14 @@ Roadmap section):
 - Local web dashboard/sandbox (offline, axum-powered) for experimenting
   with prompt mitigations.
 
-## [0.1.0] - 2026-07-07
+## [1.0.0] - 2026-07-07
 
-Initial release. Everything below was built in a single continuous
-development pass from project scaffolding through the current state of
-`master`.
+First stable release. The entire feature set below was built across a
+single continuous development history (35 commits on `master`, no
+prior tags) — this is the first version declared production-ready
+rather than an incremental 0.x preview, reflecting a complete CLI with
+full scanner coverage, five report formats, a working plugin protocol,
+hardened network policy, and CI quality gates enforced on every commit.
 
 ### Added
 
@@ -79,6 +82,8 @@ development pass from project scaffolding through the current state of
   vulnerable target, a documented CI/CD-native workflow demo, and a
   dedicated Labs section clarifying that Docker/Ollama are optional
   and only used by lab targets, never by AgentSec itself.
+- `CHANGELOG.md`, generated from the full git history in place of the
+  README's former Roadmap section.
 
 ### Changed
 
@@ -87,6 +92,8 @@ development pass from project scaffolding through the current state of
   a shared `pipeline.rs` scan-and-report pipeline, and an extracted,
   independently unit-testable `network_policy.rs`.
 - Renamed the project from "AgentSec Lab" to "AgentSec".
+- Bumped workspace version from `0.1.0` to `1.0.0` to mark this as the
+  first stable release rather than a 0.x preview.
 
 ### Fixed
 
@@ -112,4 +119,4 @@ development pass from project scaffolding through the current state of
   to `deny_private_networks=true` with empty `allowed_hosts`.
 
 [Unreleased]: https://github.com/Teycir/AgentSec/commits/master
-[0.1.0]: https://github.com/Teycir/AgentSec/commit/d21bed7315538f9336c4a76a14931d19c11ad0fa
+[1.0.0]: https://github.com/Teycir/AgentSec/commit/d21bed7315538f9336c4a76a14931d19c11ad0fa

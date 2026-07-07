@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "agentsec"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "agentsec-config",
  "agentsec-core",
@@ -16,7 +16,7 @@ dependencies = [
 
 [[package]]
 name = "agentsec-cli"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "agentsec-config",
  "agentsec-core",
@@ -39,7 +39,7 @@ dependencies = [
 
 [[package]]
 name = "agentsec-config"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "agentsec-core",
  "anyhow",
@@ -52,7 +52,7 @@ dependencies = [
 
 [[package]]
 name = "agentsec-core"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "chrono",
  "serde",
@@ -63,7 +63,7 @@ dependencies = [
 
 [[package]]
 name = "agentsec-integrations"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "agentsec-config",
  "agentsec-core",
@@ -76,7 +76,7 @@ dependencies = [
 
 [[package]]
 name = "agentsec-report"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "agentsec-config",
  "agentsec-core",
@@ -89,7 +89,7 @@ dependencies = [
 
 [[package]]
 name = "agentsec-runner"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "agentsec-config",
  "agentsec-core",
@@ -105,7 +105,7 @@ dependencies = [
 
 [[package]]
 name = "agentsec-scanners"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "agentsec-config",
  "agentsec-core",
