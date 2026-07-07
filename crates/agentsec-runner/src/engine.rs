@@ -1,4 +1,4 @@
-use agentsec_config::{Suite, Target};
+use agentsec_config::{Policies, Suite, Target};
 use agentsec_core::Finding;
 use agentsec_scanners::assertion_eval;
 use agentsec_scanners::TargetResponse;
@@ -18,12 +18,18 @@ pub struct SuiteRunResult {
 
 /// Runs every test in `suite` against `target`, turning failed assertions
 /// into `Finding`s (spec section 12: one finding per failed assertion).
+///
+/// `policies` is the project's top-level `policies:` config (spec 10.4),
+/// used by `AgentToolScanner` to cross-reference tool calls against
+/// `policies.tool_calls.forbidden_tools`. `None` if the project config
+/// doesn't declare a `policies:` block.
 pub async fn run_suite(
     client: &reqwest::Client,
     run_id: &str,
     target: &Target,
     suite: &Suite,
     limits: Option<&agentsec_config::project::LimitsSettings>,
+    policies: Option<&Policies>,
 ) -> Result<SuiteRunResult, RunnerError> {
     let mut result = SuiteRunResult::default();
     let mut responses = std::collections::HashMap::new();
@@ -156,12 +162,28 @@ pub async fn run_suite(
     result
         .findings
         .extend(agentsec_scanners::DataLeakageScanner.run(run_id, &target.id, suite, response_for));
+    result.findings.extend(agentsec_scanners::RagScanner.run(
+        run_id,
+        &target.id,
+        suite,
+        response_for,
+    ));
+
+    let tool_call_policy = policies.and_then(|p| p.tool_calls.as_ref());
+    result.findings.extend(
+        agentsec_scanners::AgentToolScanner {
+            policy: tool_call_policy,
+        }
+        .run(run_id, &target.id, suite, response_for),
+    );
 
     let scanner_categories = [
         "prompt_injection",
         "system_prompt_leakage",
         "output_handling",
         "data_leakage",
+        "rag",
+        "agent_tool",
     ];
 
     for test in &suite.tests {
@@ -304,7 +326,7 @@ mod tests {
         };
 
         // 1. Run without limits
-        let res = run_suite(&client, "run-1", &target, &suite, None)
+        let res = run_suite(&client, "run-1", &target, &suite, None, None)
             .await
             .unwrap();
         assert!(res.errors.is_empty());
@@ -334,7 +356,7 @@ mod tests {
             max_tokens_per_session: None,
             max_latency_per_request_ms: Some(10), // Limit is 10ms, server takes 100ms
         };
-        let res = run_suite(&client, "run-2", &target_slow, &suite, Some(&limits))
+        let res = run_suite(&client, "run-2", &target_slow, &suite, Some(&limits), None)
             .await
             .unwrap();
         assert_eq!(res.findings.len(), 1);

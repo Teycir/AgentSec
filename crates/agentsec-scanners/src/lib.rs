@@ -1,24 +1,27 @@
 //! agentsec-scanners: built-in scanners and assertion evaluation.
 //!
 //! Spec references:
-//! - Section 14 (Built-in Scanner Requirements) — MVP subset:
-//!   14.1 Prompt Injection, 14.2 System Prompt Leakage,
+//! - Section 14 (Built-in Scanner Requirements): 14.1 Prompt Injection,
+//!   14.2 System Prompt Leakage, 14.3 RAG, 14.4 Agent Tool,
 //!   14.5 Output Handling, 14.6 Data Leakage.
-//!   (14.3 RAG and 14.4 Agent Tool are deferred; see ADR-001.)
 //! - Section 15 (Assertion Types) — MVP set only.
 
+pub mod agent_tool;
 pub mod assertion_eval;
 pub(crate) mod common;
 pub mod data_leakage;
 pub mod output_handling;
 pub mod prompt_injection;
+pub mod rag;
 pub mod redact;
 pub mod response;
 pub mod system_prompt_leakage;
 
+pub use agent_tool::AgentToolScanner;
 pub use data_leakage::DataLeakageScanner;
 pub use output_handling::OutputHandlingScanner;
 pub use prompt_injection::PromptInjectionScanner;
+pub use rag::RagScanner;
 pub use response::TargetResponse;
 pub use system_prompt_leakage::SystemPromptLeakageScanner;
 
