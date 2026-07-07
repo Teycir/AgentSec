@@ -23,14 +23,16 @@ name: AgentSec
 command: agentsec
 install: cargo install --path crates/agentsec-cli
 languages: Rust (single binary)
-operating_modes: [ci, scan, validate, init, version]
+operating_modes: [ci, scan, validate, init, version, plugin]
 target_types: [http-chat, openai-compatible, command, lab]
 built_in_suites:
   - prompt-injection-basic
   - system-prompt-leakage-basic
+  - rag-basic
+  - agent-tool-basic
   - output-handling-basic
   - data-leakage-basic
-reports: [json, sarif, junit, markdown]
+reports: [json, sarif, junit, markdown, html]
 security_controls: [redaction, network-allowlist, deny-private-networks, baseline-comparisons, suppressions]
 ```
 
@@ -91,6 +93,7 @@ AgentSec's core value is that it translates LLM vulnerability scans into standar
     - [`agentsec ci`](#agentsec-ci)
     - [`agentsec scan`](#agentsec-scan)
     - [`agentsec version`](#agentsec-version)
+    - [`agentsec plugin`](#agentsec-plugin)
   - [🤝 Baseline \& Suppression Models](#-baseline--suppression-models)
     - [Baseline Comparison](#baseline-comparison)
     - [Suppressions Configuration](#suppressions-configuration)
@@ -222,7 +225,7 @@ Prompt engineering and autonomous tool execution are software interfaces. If the
 
 ## 🧠 Core Terminology
 
-*   **Target:** An endpoint to test, representing your application wrapper. Supports raw HTTP APIs (`http-chat`) and OpenAI compatible routers (`openai-compatible`).
+*   **Target:** An endpoint to test, representing your application wrapper. Supports raw HTTP APIs (`http-chat`), OpenAI compatible routers (`openai-compatible`), and imported [lab](#-labs-testing-against-live-vulnerable-targets) targets (`lab`).
 *   **Suite:** A collection of test cases defining inputs and validation rules (`suites/*.yml`).
 *   **Assertion:** A validation rule evaluated against a model's response (e.g. `not_contains`, `secret_not_detected`, `max_latency_ms`).
 *   **Finding:** A generated security defect detailing target violations, severities, OWASP mappings, and raw evidence.
@@ -361,7 +364,7 @@ Evidence blocks expand to show the exact request sent and response received for 
 ## 🧪 Labs: Testing Against Live Vulnerable Targets
 
 > [!IMPORTANT]
-> **AgentSec itself never requires Docker or Ollama.** The CLI is a single static Rust binary — see [0-Clicks Portability](#-principles) below. Docker is only used *optionally*, to stand up intentionally vulnerable third-party agents under `labs/` so you have something realistic to scan locally. Ollama is **not used today**; it only appears as a [planned item in the changelog](CHANGELOG.md#unreleased) for a future adversarial-fuzzing mutator loop, not a current dependency.
+> **AgentSec itself never requires Docker or Ollama.** The CLI is a single static Rust binary — see [0-Clicks Portability](#-principles) below. Docker is only used *optionally*, to stand up intentionally vulnerable third-party agents under `labs/` so you have something realistic to scan locally. Ollama is also optional: you can point an `openai-compatible` target at a local Ollama install (see the [30-Second Quickstart](#️-quickstart-in-30-seconds) above) as one convenient way to get a target running with nothing to sign up for, but AgentSec doesn't require it — any HTTP or OpenAI-compatible endpoint works the same way. A *different*, not-yet-built use of Ollama — as a secondary attacker-LLM to generate adversarial mutations — is tracked separately as a [planned item in the changelog](CHANGELOG.md#unreleased).
 
 The [`labs/`](labs) directory holds manifests describing publicly available, intentionally vulnerable AI agent projects you can run locally and point AgentSec at, so you're testing against real (if deliberately broken) behavior instead of a mocked API. Each `labs/<id>.yml` declares:
 
@@ -397,7 +400,7 @@ Validates the structural and environment integrity of config files without sendi
 Main automation command. Runs all target/suite pairs, writes reports, and enforces build failures on exit.
 *   `--config <PATH>` (defaults to `agentsec.yml`)
 *   `--out <DIR>` (overrides default output directory)
-*   `--format <json,sarif,junit,markdown>` (comma-separated list of formats)
+*   `--format <json,sarif,junit,markdown,html>` (comma-separated list of formats)
 *   `--fail-on <info | low | medium | high | critical | never>` (severity failure threshold)
 *   `--baseline <PATH>` (compares findings against baseline file)
 *   `--update-baseline` (overwrites the baseline file with current results)
@@ -408,12 +411,19 @@ Ad-hoc target scanning.
 *   `--suite <SUITE_ID>`
 *   `--config <PATH>`
 *   `--out <DIR>`
-*   `--format <json,sarif,junit,markdown>`
+*   `--format <json,sarif,junit,markdown,html>`
 *   `--fail-on <info | low | medium | high | critical | never>`
 *   `--timeout <SECONDS>`
 
 ### `agentsec version`
 Prints binary version information.
+
+### `agentsec plugin`
+External security-tool plugin adapters (spec 8.8/21) — runs a suite through a subprocess speaking AgentSec's plugin protocol instead of a built-in scanner (see [Plugin Adapters](#-system-architecture) in the architecture diagram above).
+*   `agentsec plugin list` — lists plugin adapters built into this binary (e.g. `promptfoo`), regardless of whether the actual plugin binary is installed
+*   `agentsec plugin info <NAME>` — runs `<name> capabilities` on `PATH` and prints what it reports
+*   `agentsec plugin run <NAME> --target <ID> --suite <SUITE_ID>` — runs one suite against one target through the named plugin, writing reports the same way `agentsec scan` does (`--config`, `--out`, `--format`, `--fail-on`, `--timeout` all supported)
+*   `agentsec plugin validate-output <PATH>` — validates a plugin's scan-output JSON file against the spec 21.4 shape without running anything
 
 ---
 
@@ -542,7 +552,7 @@ agentsec/
 │   ├── agentsec-config/      # Config and suite parser / validator
 │   ├── agentsec-runner/      # Request execution engine
 │   ├── agentsec-scanners/    # Built-in scanners and assertions evaluation
-│   ├── agentsec-report/      # Formatter (JSON, SARIF, JUnit, Markdown)
+│   ├── agentsec-report/      # Formatter (JSON, SARIF, JUnit, Markdown, HTML)
 │   └── agentsec-integrations/# Pluggable tool connectors
 ├── examples/
 │   ├── github-actions.yml
