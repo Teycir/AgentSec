@@ -11,7 +11,7 @@ pub mod suite;
 pub mod target;
 pub mod validate;
 
-pub use project::ProjectConfig;
+pub use project::{Policies, ProjectConfig, ToolCallPolicy};
 pub use suite::{Assertion, Suite, SuiteTest};
-pub use target::Target;
+pub use target::{Target, TargetKind};
 pub use validate::{validate_config, validate_suite, validate_suite_ids, ValidationError};

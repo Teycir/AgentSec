@@ -20,6 +20,7 @@ version = "0.1.0"
 dependencies = [
  "agentsec-config",
  "agentsec-core",
+ "agentsec-integrations",
  "agentsec-report",
  "agentsec-runner",
  "agentsec-scanners",
@@ -64,7 +65,13 @@ dependencies = [
 name = "agentsec-integrations"
 version = "0.1.0"
 dependencies = [
+ "agentsec-config",
  "agentsec-core",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "uuid",
 ]
 
 [[package]]

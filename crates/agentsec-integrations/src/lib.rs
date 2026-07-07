@@ -1,10 +1,12 @@
 //! agentsec-integrations: plugin adapters for external tools
 //! (garak, PyRIT, Promptfoo — spec section 21).
 //!
-//! Deferred past MVP v0.1 (spec section 25): this crate exists so the
-//! workspace compiles and to reserve the API surface, but no plugin
-//! adapters are implemented yet.
+//! `plugin` implements the generic subprocess JSON protocol shared by
+//! every adapter (spec 21.1-21.4). `promptfoo` is the first named
+//! adapter built on top of it, scoped deliberately to just Promptfoo for
+//! now — garak and PyRIT are Python-native and heavier to wrap cleanly,
+//! so they're left for a follow-up rather than built speculatively
+//! alongside this one.
 
-/// Placeholder marker so this crate has a non-empty public surface until
-/// the plugin system (spec section 21) is implemented.
-pub const INTEGRATIONS_IMPLEMENTED: bool = false;
+pub mod plugin;
+pub mod promptfoo;
