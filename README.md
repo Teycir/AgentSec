@@ -98,7 +98,7 @@ AgentSec's core value is that it translates LLM vulnerability scans into standar
     - [GitHub Actions](#github-actions)
     - [GitLab CI](#gitlab-ci)
     - [Jenkins Pipeline](#jenkins-pipeline)
-  - [🗺️ Roadmap & Release Phases](#️-roadmap--release-phases)
+  - [📝 Changelog](#-changelog)
   - [📂 Repository Anatomy](#-repository-anatomy)
   - [📜 Principles](#-principles)
   - [Support Development](#support-development)
@@ -340,7 +340,7 @@ Evidence blocks expand to show the exact request sent and response received for 
 ## 🧪 Labs: Testing Against Live Vulnerable Targets
 
 > [!IMPORTANT]
-> **AgentSec itself never requires Docker or Ollama.** The CLI is a single static Rust binary — see [0-Clicks Portability](#-principles) below. Docker is only used *optionally*, to stand up intentionally vulnerable third-party agents under `labs/` so you have something realistic to scan locally. Ollama is **not used today**; it only appears as a [Phase 2 roadmap item](#️-roadmap--release-phases) for a future adversarial-fuzzing mutator loop, not a current dependency.
+> **AgentSec itself never requires Docker or Ollama.** The CLI is a single static Rust binary — see [0-Clicks Portability](#-principles) below. Docker is only used *optionally*, to stand up intentionally vulnerable third-party agents under `labs/` so you have something realistic to scan locally. Ollama is **not used today**; it only appears as a [planned item in the changelog](CHANGELOG.md#unreleased) for a future adversarial-fuzzing mutator loop, not a current dependency.
 
 The [`labs/`](labs) directory holds manifests describing publicly available, intentionally vulnerable AI agent projects you can run locally and point AgentSec at, so you're testing against real (if deliberately broken) behavior instead of a mocked API. Each `labs/<id>.yml` declares:
 
@@ -501,26 +501,9 @@ pipeline {
 
 ---
 
-## 🗺️ Roadmap & Release Phases
+## 📝 Changelog
 
-We are actively developing AgentSec. Below are the key milestones on our roadmap to build a premium, developer-first AI security platform:
-
-### 🟢 Phase 1: Core CLI & CI/CD Native (Current)
-*   **Pure Rust CLI Workspace:** Unified Cargo package architecture for easy compilation and dependency integration.
-*   **Static Scanning Engine:** Prompt injection canary overrides, system prompt leakage regex, data masking, and output rendering validation.
-*   **Durable State Policies:** Support for stateful baselines (`--baseline`) and time-bound suppressions (`suppressions.yml`).
-*   **Standard CI/CD Reports:** Native SARIF, JUnit, and JSON output formats.
-
-### 🟡 Phase 2: Runtime Guardrails & Live Testing (Q3 2026)
-*   **🧬 Generative Adversarial Fuzzing:** Integrates a secondary attacker LLM mutator loop (Ollama/OpenAI) to generate context-specific jailbreak attempts dynamically.
-*   **📚 RAG Context Poisoning Simulator:** Native mock vector DB connectors to insert poisoned search inputs and verify output security.
-*   **💰 Cost & Loop Exhaustion Protection:** Monitors tokens, TTFT, and recursive execution loops to block model Denial-of-Service (DoS).
-*   **🧩 Structured Output Auditing:** Validates tool call parameters for schema violations and command injections.
-
-### 🔴 Phase 3: Developer Platform & Visual TUI (Q4 2026)
-*   **📊 Interactive CLI TUI Dashboard:** Real-time visual progress rendering of test executions inside the console.
-*   **🔌 Provider Adapters:** Native configuration templates for Gemini, Claude, and Bedrock.
-*   **🌐 Local Web Dashboard & Sandbox:** An offline axum-powered visual playground to experiment with prompt mitigations and immediately check vulnerability checks.
+All notable changes, fixes, and security-relevant updates are tracked in [`CHANGELOG.md`](CHANGELOG.md), grouped by release under Keep a Changelog conventions (Added / Changed / Fixed / Security). Planned, not-yet-built work — the fuzzing mutator loop, RAG poisoning simulator, TUI dashboard, and similar — lives under its [`[Unreleased]`](CHANGELOG.md#unreleased) section rather than as a separate roadmap.
 
 ---
 
