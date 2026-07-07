@@ -84,6 +84,7 @@ AgentSec's core value is that it translates LLM vulnerability scans into standar
   - [🧠 Core Terminology](#-core-terminology)
   - [🏗️ System Architecture](#️-system-architecture)
   - [🔄 Workflow Demo](#-workflow-demo)
+  - [🧪 Labs: Testing Against Live Vulnerable Targets](#-labs-testing-against-live-vulnerable-targets)
   - [🔌 API \& Command Surface](#-api--command-surface)
     - [`agentsec init`](#agentsec-init)
     - [`agentsec validate`](#agentsec-validate)
@@ -336,6 +337,31 @@ Evidence blocks expand to show the exact request sent and response received for 
 
 ---
 
+## 🧪 Labs: Testing Against Live Vulnerable Targets
+
+> [!IMPORTANT]
+> **AgentSec itself never requires Docker or Ollama.** The CLI is a single static Rust binary — see [0-Clicks Portability](#-principles) below. Docker is only used *optionally*, to stand up intentionally vulnerable third-party agents under `labs/` so you have something realistic to scan locally. Ollama is **not used today**; it only appears as a [Phase 2 roadmap item](#️-roadmap--release-phases) for a future adversarial-fuzzing mutator loop, not a current dependency.
+
+The [`labs/`](labs) directory holds manifests describing publicly available, intentionally vulnerable AI agent projects you can run locally and point AgentSec at, so you're testing against real (if deliberately broken) behavior instead of a mocked API. Each `labs/<id>.yml` declares:
+
+*   `runtime` — how to stand the target up: either `docker` (build from a `Dockerfile`) or `docker-compose` (`docker compose up`), plus its default port
+*   `healthcheck` — a URL AgentSec-adjacent tooling can poll to know the container is ready
+*   `target` — the actual `http-chat` endpoint AgentSec talks to (often *not* the same port as the container's main UI — see the DVAA example below)
+*   `default_suites` — which built-in suites make sense to run against it
+
+| Lab manifest | Upstream project | Runtime |
+|---|---|---|
+| [`damn-vulnerable-ai-agent.yml`](labs/damn-vulnerable-ai-agent.yml) | [damn-vulnerable-ai-agent](https://github.com/opena2a-org/damn-vulnerable-ai-agent) | `docker-compose` |
+| [`damn-vulnerable-email-agent.yml`](labs/damn-vulnerable-email-agent.yml) | [damn-vulnerable-email-agent](https://github.com/kyuz0/damn-vulnerable-email-agent) | `docker` |
+| [`rag-poisoning-poc.yml`](labs/rag-poisoning-poc.yml) | [RAG_Poisoning_POC](https://github.com/prompt-security/RAG_Poisoning_POC) | `docker` |
+| [`reversec-dvla.yml`](labs/reversec-dvla.yml) | [damn-vulnerable-llm-agent](https://github.com/ReversecLabs/damn-vulnerable-llm-agent) | `docker` |
+
+None of these upstream repos are vendored in AgentSec — clone the one you want next to the repo (e.g. `git clone <repo-url> External/damn-vulnerable-ai-agent`, matching the `repo:` field in the manifest), bring it up with Docker per its own instructions, then point your `agentsec.yml` target at the port from the manifest.
+
+**Worked example — HelperBot from damn-vulnerable-ai-agent:** the [Workflow Demo](#-workflow-demo) recording above scans HelperBot, one of DVAA's agents, which the DVAA `docker-compose.yml` exposes on `localhost:7002` (the manifest's `default_port: 9000` is DVAA's separate dashboard UI, not a chat API — the `target:` block correctly overrides this to point at HelperBot's real `/chat` endpoint). Because the built-in canary-based suites need a canary string configured in the target's own system prompt to detect reliably, and HelperBot ships with none, we also wrote [`labs/damn-vulnerable-ai-agent-demo-suite.yml`](labs/damn-vulnerable-ai-agent-demo-suite.yml), tailored to HelperBot's actual observed leak/injection behavior, so the recorded findings are genuine rather than staged.
+
+---
+
 ## 🔌 API & Command Surface
 
 ### `agentsec init`
@@ -518,13 +544,20 @@ agentsec/
 │   ├── github-actions.yml
 │   ├── gitlab-ci.yml
 │   └── jenkinsfile
-├── labs/
+├── labs/                      # Manifests for optional, Docker-based vulnerable
+│   │                          # targets to scan (see 🧪 Labs section above).
+│   │                          # AgentSec itself does not require Docker.
 │   ├── damn-vulnerable-ai-agent.yml
-│   └── damn-vulnerable-email-agent.yml
+│   ├── damn-vulnerable-ai-agent-demo-suite.yml
+│   ├── damn-vulnerable-email-agent.yml
+│   ├── rag-poisoning-poc.yml
+│   └── reversec-dvla.yml
 ├── suites/
+│   ├── agent-tool-basic.yml
 │   ├── data-leakage-basic.yml
 │   ├── output-handling-basic.yml
 │   ├── prompt-injection-basic.yml
+│   ├── rag-basic.yml
 │   └── system-prompt-leakage-basic.yml
 └── Cargo.toml
 ```
