@@ -14,6 +14,11 @@ pub struct Finding {
     pub test_id: String,
     pub scanner: String,
     pub severity: Severity,
+    /// Confidence that the observed behavior represents a real finding.
+    /// Deterministic findings use 1.0; repeated probabilistic tests use the
+    /// observed success rate.
+    #[serde(default = "default_confidence")]
+    pub confidence: f32,
     pub category: String,
     pub title: String,
     pub description: String,
@@ -29,6 +34,10 @@ pub struct Finding {
     pub suppressed: bool,
     #[serde(default)]
     pub suppression_reason: Option<String>,
+}
+
+fn default_confidence() -> f32 {
+    1.0
 }
 
 impl Finding {
