@@ -48,7 +48,6 @@ pub async fn run_suite(
 
             cumulative_tokens += response.answer.chars().count() / 4;
             responses_by_test.entry(test.id.clone()).or_default().push(response.clone());
-
             session.push_turn(SessionTurn {
                 sequence: repetition,
                 test_id: test.id.clone(),
@@ -60,7 +59,7 @@ pub async fn run_suite(
             if let Some(max_latency) = limits.and_then(|l| l.max_latency_per_request_ms) {
                 if response.latency_ms > max_latency {
                     result.findings.push(resource_finding(
-                        run_id, target, suite, test, &response,
+                        ResourceFindingContext { run_id, target, suite, test, response: &response },
                         "Latency Limit Exceeded",
                         format!("Request latency of {}ms exceeded the configured maximum of {max_latency}ms", response.latency_ms),
                         format!("latency ({}ms) > limit ({max_latency}ms)", response.latency_ms),
@@ -72,7 +71,7 @@ pub async fn run_suite(
             if let Some(max_tokens) = limits.and_then(|l| l.max_tokens_per_session) {
                 if cumulative_tokens > max_tokens {
                     result.findings.push(resource_finding(
-                        run_id, target, suite, test, &response,
+                        ResourceFindingContext { run_id, target, suite, test, response: &response },
                         "Session Token Limit Exceeded",
                         format!("Cumulative estimated tokens of {cumulative_tokens} exceeded the configured maximum of {max_tokens}"),
                         format!("estimated tokens ({cumulative_tokens}) > limit ({max_tokens})"),
@@ -184,6 +183,14 @@ fn merge_scanner<S: Scanner>(
     }
 }
 
+struct ResourceFindingContext<'a> {
+    run_id: &'a str,
+    target: &'a Target,
+    suite: &'a Suite,
+    test: &'a SuiteTest,
+    response: &'a TargetResponse,
+}
+
 fn build_finding(
     run_id: &str,
     target: &Target,
@@ -216,11 +223,7 @@ fn build_finding(
 }
 
 fn resource_finding(
-    run_id: &str,
-    target: &Target,
-    suite: &Suite,
-    test: &SuiteTest,
-    response: &TargetResponse,
+    context: ResourceFindingContext<'_>,
     title: &str,
     description: String,
     assertion: String,
@@ -228,10 +231,10 @@ fn resource_finding(
 ) -> Finding {
     Finding {
         id: Uuid::new_v4().to_string(),
-        run_id: run_id.to_string(),
-        target_id: target.id.clone(),
-        suite_id: suite.id.clone(),
-        test_id: test.id.clone(),
+        run_id: context.run_id.to_string(),
+        target_id: context.target.id.clone(),
+        suite_id: context.suite.id.clone(),
+        test_id: context.test.id.clone(),
         scanner: "resource_exhaustion".to_string(),
         severity: Severity::High,
         confidence,
@@ -240,7 +243,7 @@ fn resource_finding(
         description: agentsec_scanners::redact::sanitize_evidence_text(&description),
         owasp: vec!["LLM04: Model Denial of Service".to_string()],
         cwe: Vec::new(),
-        evidence: sanitized_evidence(response, Some(assertion)),
+        evidence: sanitized_evidence(context.response, Some(assertion)),
         recommendation: "Review resource limits, capacity, and model/provider configuration.".to_string(),
         references: Vec::new(),
         suppressed: false,
