@@ -8,8 +8,12 @@
 pub mod exit_code;
 pub mod finding;
 pub mod owasp;
+pub mod outcome;
+pub mod session;
 pub mod severity;
 
 pub use exit_code::ExitCode;
 pub use finding::{Evidence, Finding, Reference};
+pub use outcome::{TestOutcome, TestStatus};
+pub use session::{SessionTrace, SessionTurn};
 pub use severity::Severity;
