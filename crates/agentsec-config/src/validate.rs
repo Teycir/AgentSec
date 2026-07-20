@@ -120,6 +120,8 @@ mod tests {
             input: "input".to_string(),
             assertions: Vec::new(),
             recommendation: String::new(),
+            repetitions: 1,
+            min_passes: None,
         }
     }
 
