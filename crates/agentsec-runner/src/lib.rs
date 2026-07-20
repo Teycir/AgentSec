@@ -1,7 +1,6 @@
 //! agentsec-runner: executes suite tests against targets over HTTP and
 //! turns failed assertions into findings.
 
-pub mod engine;
 pub mod engine_v2;
 pub mod error;
 pub mod executor;
