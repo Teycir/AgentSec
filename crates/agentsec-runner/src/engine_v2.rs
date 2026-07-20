@@ -37,7 +37,6 @@ pub async fn run_suite(
         let mut first_error = None;
 
         for repetition in 0..repetitions {
-            let started = std::time::Instant::now();
             let response = match executor::execute(client, target, &test.input).await {
                 Ok(response) => response,
                 Err(error) => {
@@ -47,7 +46,6 @@ pub async fn run_suite(
                 }
             };
 
-            let latency_ms = started.elapsed().as_millis() as u64;
             cumulative_tokens += response.answer.chars().count() / 4;
             responses_by_test.entry(test.id.clone()).or_default().push(response.clone());
 
@@ -60,12 +58,12 @@ pub async fn run_suite(
             });
 
             if let Some(max_latency) = limits.and_then(|l| l.max_latency_per_request_ms) {
-                if latency_ms > max_latency {
+                if response.latency_ms > max_latency {
                     result.findings.push(resource_finding(
                         run_id, target, suite, test, &response,
                         "Latency Limit Exceeded",
-                        format!("Request latency of {latency_ms}ms exceeded the configured maximum of {max_latency}ms"),
-                        format!("latency ({latency_ms}ms) > limit ({max_latency}ms)"),
+                        format!("Request latency of {}ms exceeded the configured maximum of {max_latency}ms", response.latency_ms),
+                        format!("latency ({}ms) > limit ({max_latency}ms)", response.latency_ms),
                         1.0 / repetitions as f32,
                     ));
                 }
@@ -136,48 +134,18 @@ pub async fn run_suite(
     for test in &suite.tests {
         let responses = responses_by_test.get(&test.id).cloned().unwrap_or_default();
         let repetitions = test.repetitions.max(1);
+        let single_test_suite = Suite { tests: vec![test.clone()], ..suite.clone() };
+
         for response in responses {
-            merge_scanner(
-                &mut merged,
-                agentsec_scanners::PromptInjectionScanner,
-                run_id, target, suite,
-                |candidate: &SuiteTest| if candidate.id == test.id { response.clone() } else { TargetResponse::default() },
-                repetitions,
-            );
-            merge_scanner(
-                &mut merged,
-                agentsec_scanners::SystemPromptLeakageScanner,
-                run_id, target, suite,
-                |candidate: &SuiteTest| if candidate.id == test.id { response.clone() } else { TargetResponse::default() },
-                repetitions,
-            );
-            merge_scanner(
-                &mut merged,
-                agentsec_scanners::OutputHandlingScanner,
-                run_id, target, suite,
-                |candidate: &SuiteTest| if candidate.id == test.id { response.clone() } else { TargetResponse::default() },
-                repetitions,
-            );
-            merge_scanner(
-                &mut merged,
-                agentsec_scanners::DataLeakageScanner,
-                run_id, target, suite,
-                |candidate: &SuiteTest| if candidate.id == test.id { response.clone() } else { TargetResponse::default() },
-                repetitions,
-            );
-            merge_scanner(
-                &mut merged,
-                agentsec_scanners::RagScanner,
-                run_id, target, suite,
-                |candidate: &SuiteTest| if candidate.id == test.id { response.clone() } else { TargetResponse::default() },
-                repetitions,
-            );
+            merge_scanner(&mut merged, agentsec_scanners::PromptInjectionScanner, run_id, target, &single_test_suite, |_| response.clone(), repetitions);
+            merge_scanner(&mut merged, agentsec_scanners::SystemPromptLeakageScanner, run_id, target, &single_test_suite, |_| response.clone(), repetitions);
+            merge_scanner(&mut merged, agentsec_scanners::OutputHandlingScanner, run_id, target, &single_test_suite, |_| response.clone(), repetitions);
+            merge_scanner(&mut merged, agentsec_scanners::DataLeakageScanner, run_id, target, &single_test_suite, |_| response.clone(), repetitions);
+            merge_scanner(&mut merged, agentsec_scanners::RagScanner, run_id, target, &single_test_suite, |_| response.clone(), repetitions);
             merge_scanner(
                 &mut merged,
                 agentsec_scanners::AgentToolScanner { policy: policies.and_then(|p| p.tool_calls.as_ref()) },
-                run_id, target, suite,
-                |candidate: &SuiteTest| if candidate.id == test.id { response.clone() } else { TargetResponse::default() },
-                repetitions,
+                run_id, target, &single_test_suite, |_| response.clone(), repetitions,
             );
         }
     }
