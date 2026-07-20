@@ -32,14 +32,29 @@ const CSS: &str = r#"
 
 fn render_body(report: &RunReport) -> String {
     let mut out = String::from("<div class=\"report\">\n");
-    out.push_str(&format!("<div class=\"header\"><h1>AgentSec Report</h1><div class=\"meta\">{}<br>{}</div></div>\n", escape(&report.project_name), escape(&report.finished_at.to_rfc3339())));
+    out.push_str(&format!(
+        "<div class=\"header\"><h1>AgentSec Report</h1><div class=\"meta\">{}<br>{}</div></div>\n",
+        escape(&report.project_name),
+        escape(&report.finished_at.to_rfc3339())
+    ));
     if !report.target_ids.is_empty() {
-        let targets = report.target_ids.iter().map(|t| format!("<code>{}</code>", escape(t))).collect::<Vec<_>>().join(" ");
-        out.push_str(&format!("<div class=\"targets\">Targets: {targets}</div>\n"));
+        let targets = report
+            .target_ids
+            .iter()
+            .map(|t| format!("<code>{}</code>", escape(t)))
+            .collect::<Vec<_>>()
+            .join(" ");
+        out.push_str(&format!(
+            "<div class=\"targets\">Targets: {targets}</div>\n"
+        ));
     }
     out.push_str(&render_spine(report));
     out.push_str(&render_findings(report));
-    out.push_str(&format!("<div class=\"footer\">run {} · {} tests run</div>\n</div>\n", escape(&report.run_id), report.summary.total_tests_run));
+    out.push_str(&format!(
+        "<div class=\"footer\">run {} · {} tests run</div>\n</div>\n",
+        escape(&report.run_id),
+        report.summary.total_tests_run
+    ));
     out
 }
 
@@ -48,9 +63,19 @@ fn render_spine(report: &RunReport) -> String {
     let mut bar = String::new();
     let mut legend = String::new();
     for severity in Severity::ALL.iter().rev() {
-        let count = report.summary.by_severity.get(severity).copied().unwrap_or(0);
+        let count = report
+            .summary
+            .by_severity
+            .get(severity)
+            .copied()
+            .unwrap_or(0);
         let class = severity_class(*severity);
-        if count > 0 && total > 0 { bar.push_str(&format!("<div class=\"seg {class}\" style=\"width:{:.2}%\"></div>\n", count as f64 / total as f64 * 100.0)); }
+        if count > 0 && total > 0 {
+            bar.push_str(&format!(
+                "<div class=\"seg {class}\" style=\"width:{:.2}%\"></div>\n",
+                count as f64 / total as f64 * 100.0
+            ));
+        }
         legend.push_str(&format!("<span class=\"item\"><span class=\"dot {class}\"></span><span class=\"count\">{count}</span> <span class=\"label\">{}</span></span>\n", severity_label(*severity)));
     }
     format!("<div class=\"spine\"><div class=\"spine-bar\">{bar}</div><div class=\"spine-legend\">{legend}</div></div>\n")
@@ -59,30 +84,84 @@ fn render_spine(report: &RunReport) -> String {
 fn render_findings(report: &RunReport) -> String {
     let mut findings: Vec<&Finding> = report.findings.iter().filter(|f| !f.suppressed).collect();
     findings.sort_by_key(|f| std::cmp::Reverse(f.severity));
-    if findings.is_empty() { return "<div class=\"section-title\">Findings</div>\n<div class=\"empty\">No findings.</div>\n".to_string(); }
-    format!("<div class=\"section-title\">Findings</div>\n{}", findings.into_iter().map(render_finding).collect::<String>())
+    if findings.is_empty() {
+        return "<div class=\"section-title\">Findings</div>\n<div class=\"empty\">No findings.</div>\n".to_string();
+    }
+    format!(
+        "<div class=\"section-title\">Findings</div>\n{}",
+        findings.into_iter().map(render_finding).collect::<String>()
+    )
 }
 
 fn render_finding(f: &Finding) -> String {
-    let owasp = if f.owasp.is_empty() { String::new() } else { format!("<span class=\"owasp\">OWASP: {}</span><br>\n", escape(&f.owasp.join(", "))) };
-    let recommendation = if f.recommendation.is_empty() { String::new() } else { format!("<div class=\"recommendation\"><span class=\"label\">Recommendation</span>{}</div>\n", escape(&f.recommendation)) };
+    let owasp = if f.owasp.is_empty() {
+        String::new()
+    } else {
+        format!(
+            "<span class=\"owasp\">OWASP: {}</span><br>\n",
+            escape(&f.owasp.join(", "))
+        )
+    };
+    let recommendation = if f.recommendation.is_empty() {
+        String::new()
+    } else {
+        format!(
+            "<div class=\"recommendation\"><span class=\"label\">Recommendation</span>{}</div>\n",
+            escape(&f.recommendation)
+        )
+    };
     format!("<div class=\"finding\" data-severity=\"{}\">\n<div class=\"finding-head\"><span class=\"badge\">{}</span><span class=\"finding-title\">{}</span></div>\n<div class=\"finding-sub\">{} · {} · target: {}</div>\n{}<p class=\"desc\">{}</p>\n{}{}\n</div>\n", severity_class(f.severity), severity_label(f.severity), escape(&f.title), escape(&f.scanner), escape(&f.test_id), escape(&f.target_id), owasp, escape(&f.description), render_evidence(f), recommendation)
 }
 
 fn render_evidence(f: &Finding) -> String {
     let ev = &f.evidence;
-    if ev.request_summary.is_empty() && ev.response_summary.is_empty() { return String::new(); }
+    if ev.request_summary.is_empty() && ev.response_summary.is_empty() {
+        return String::new();
+    }
     let mut inner = String::new();
-    if !ev.request_summary.is_empty() { inner.push_str(&format!("<pre>{}</pre>\n", escape(&ev.request_summary))); }
-    if !ev.response_summary.is_empty() { inner.push_str(&format!("<pre>{}</pre>\n", escape(&ev.response_summary))); }
-    if let Some(assertion) = &ev.matched_assertion { inner.push_str(&format!("<pre>matched assertion: {}</pre>\n", escape(assertion))); }
-    if ev.redactions_applied { inner.push_str("<pre>[some evidence redacted]</pre>\n"); }
+    if !ev.request_summary.is_empty() {
+        inner.push_str(&format!("<pre>{}</pre>\n", escape(&ev.request_summary)));
+    }
+    if !ev.response_summary.is_empty() {
+        inner.push_str(&format!("<pre>{}</pre>\n", escape(&ev.response_summary)));
+    }
+    if let Some(assertion) = &ev.matched_assertion {
+        inner.push_str(&format!(
+            "<pre>matched assertion: {}</pre>\n",
+            escape(assertion)
+        ));
+    }
+    if ev.redactions_applied {
+        inner.push_str("<pre>[some evidence redacted]</pre>\n");
+    }
     format!("<details class=\"evidence\"><summary>Evidence</summary>{inner}</details>\n")
 }
 
-fn severity_class(severity: Severity) -> &'static str { match severity { Severity::Info => "info", Severity::Low => "low", Severity::Medium => "medium", Severity::High => "high", Severity::Critical => "critical" } }
-fn severity_label(severity: Severity) -> &'static str { match severity { Severity::Info => "Info", Severity::Low => "Low", Severity::Medium => "Medium", Severity::High => "High", Severity::Critical => "Critical" } }
-fn escape(s: &str) -> String { s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;").replace('"', "&quot;").replace('\'', "&#39;") }
+fn severity_class(severity: Severity) -> &'static str {
+    match severity {
+        Severity::Info => "info",
+        Severity::Low => "low",
+        Severity::Medium => "medium",
+        Severity::High => "high",
+        Severity::Critical => "critical",
+    }
+}
+fn severity_label(severity: Severity) -> &'static str {
+    match severity {
+        Severity::Info => "Info",
+        Severity::Low => "Low",
+        Severity::Medium => "Medium",
+        Severity::High => "High",
+        Severity::Critical => "Critical",
+    }
+}
+fn escape(s: &str) -> String {
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&#39;")
+}
 
 #[cfg(test)]
 mod tests {
@@ -92,14 +171,105 @@ mod tests {
     use std::collections::BTreeMap;
 
     fn finding(severity: Severity, suppressed: bool) -> Finding {
-        Finding { id:"f1".into(), run_id:"run1".into(), target_id:"target1".into(), suite_id:"suite1".into(), test_id:"test-1".into(), scanner:"prompt_injection".into(), severity, confidence:1.0, category:"prompt_injection".into(), title:"Injection <bypass>".into(), description:"The target leaked & obeyed \"injected\" instructions.".into(), owasp:vec!["LLM01".into()], cwe:vec![], evidence:Evidence { request_summary:"req".into(), response_summary:"resp".into(), raw_request_path:None, raw_response_path:None, trace_id:None, matched_assertion:Some("assertion x".into()), redactions_applied:false }, recommendation:"Sanitize input.".into(), references:vec![], suppressed, suppression_reason:None }
+        Finding {
+            id: "f1".into(),
+            run_id: "run1".into(),
+            target_id: "target1".into(),
+            suite_id: "suite1".into(),
+            test_id: "test-1".into(),
+            scanner: "prompt_injection".into(),
+            severity,
+            confidence: 1.0,
+            category: "prompt_injection".into(),
+            title: "Injection <bypass>".into(),
+            description: "The target leaked & obeyed \"injected\" instructions.".into(),
+            owasp: vec!["LLM01".into()],
+            cwe: vec![],
+            evidence: Evidence {
+                request_summary: "req".into(),
+                response_summary: "resp".into(),
+                raw_request_path: None,
+                raw_response_path: None,
+                trace_id: None,
+                matched_assertion: Some("assertion x".into()),
+                redactions_applied: false,
+            },
+            recommendation: "Sanitize input.".into(),
+            references: vec![],
+            suppressed,
+            suppression_reason: None,
+        }
     }
-    fn report(findings: Vec<Finding>) -> RunReport { let mut by_severity=BTreeMap::new(); for f in &findings { if !f.suppressed { *by_severity.entry(f.severity).or_insert(0)+=1; } } let total_findings=findings.iter().filter(|f| !f.suppressed).count(); RunReport { run_id:"run1".into(), project_name:"demo".into(), started_at:Utc::now(), finished_at:Utc::now(), target_ids:vec!["target1".into()], suite_ids:vec!["suite1".into()], findings, summary:crate::summary::RunSummary { total_tests_run:10, total_findings, by_severity } } }
-    #[test] fn renders_valid_document_shell(){let html=to_html(&report(vec![finding(Severity::High,false)])); assert!(html.starts_with("<!DOCTYPE html>")); assert!(html.contains("<html lang=\"en\">")); assert!(html.trim_end().ends_with("</html>"));}
-    #[test] fn escapes_finding_text(){let html=to_html(&report(vec![finding(Severity::Critical,false)])); assert!(!html.contains("Injection <bypass>")); assert!(html.contains("Injection &lt;bypass&gt;")); assert!(html.contains("&amp;")); assert!(html.contains("&quot;injected&quot;"));}
-    #[test] fn suppressed_findings_are_excluded(){let html=to_html(&report(vec![finding(Severity::Low,true)])); assert!(html.contains("No findings.")); assert!(!html.contains("class=\"finding\" data-severity"));}
-    #[test] fn empty_report_shows_no_findings(){assert!(to_html(&report(vec![])).contains("No findings."));}
-    #[test] fn spine_omits_zero_count_segments(){let html=to_html(&report(vec![finding(Severity::Critical,false)])); assert_eq!(html.matches("class=\"seg ").count(),1); assert!(html.contains("seg critical"));}
-    #[test] fn findings_sorted_worst_first(){let html=to_html(&report(vec![finding(Severity::Low,false),finding(Severity::Critical,false)])); assert!(html.find("data-severity=\"critical\"").unwrap()<html.find("data-severity=\"low\"").unwrap());}
-    #[test] fn evidence_included_in_details_block(){let html=to_html(&report(vec![finding(Severity::Medium,false)])); assert!(html.contains("<details class=\"evidence\">")); assert!(html.contains("<pre>req</pre>")); assert!(html.contains("<pre>resp</pre>"));}
+    fn report(findings: Vec<Finding>) -> RunReport {
+        let mut by_severity = BTreeMap::new();
+        for f in &findings {
+            if !f.suppressed {
+                *by_severity.entry(f.severity).or_insert(0) += 1;
+            }
+        }
+        let total_findings = findings.iter().filter(|f| !f.suppressed).count();
+        RunReport {
+            run_id: "run1".into(),
+            project_name: "demo".into(),
+            started_at: Utc::now(),
+            finished_at: Utc::now(),
+            target_ids: vec!["target1".into()],
+            suite_ids: vec!["suite1".into()],
+            findings,
+            summary: crate::summary::RunSummary {
+                total_tests_run: 10,
+                total_findings,
+                by_severity,
+            },
+        }
+    }
+    #[test]
+    fn renders_valid_document_shell() {
+        let html = to_html(&report(vec![finding(Severity::High, false)]));
+        assert!(html.starts_with("<!DOCTYPE html>"));
+        assert!(html.contains("<html lang=\"en\">"));
+        assert!(html.trim_end().ends_with("</html>"));
+    }
+    #[test]
+    fn escapes_finding_text() {
+        let html = to_html(&report(vec![finding(Severity::Critical, false)]));
+        assert!(!html.contains("Injection <bypass>"));
+        assert!(html.contains("Injection &lt;bypass&gt;"));
+        assert!(html.contains("&amp;"));
+        assert!(html.contains("&quot;injected&quot;"));
+    }
+    #[test]
+    fn suppressed_findings_are_excluded() {
+        let html = to_html(&report(vec![finding(Severity::Low, true)]));
+        assert!(html.contains("No findings."));
+        assert!(!html.contains("class=\"finding\" data-severity"));
+    }
+    #[test]
+    fn empty_report_shows_no_findings() {
+        assert!(to_html(&report(vec![])).contains("No findings."));
+    }
+    #[test]
+    fn spine_omits_zero_count_segments() {
+        let html = to_html(&report(vec![finding(Severity::Critical, false)]));
+        assert_eq!(html.matches("class=\"seg ").count(), 1);
+        assert!(html.contains("seg critical"));
+    }
+    #[test]
+    fn findings_sorted_worst_first() {
+        let html = to_html(&report(vec![
+            finding(Severity::Low, false),
+            finding(Severity::Critical, false),
+        ]));
+        assert!(
+            html.find("data-severity=\"critical\"").unwrap()
+                < html.find("data-severity=\"low\"").unwrap()
+        );
+    }
+    #[test]
+    fn evidence_included_in_details_block() {
+        let html = to_html(&report(vec![finding(Severity::Medium, false)]));
+        assert!(html.contains("<details class=\"evidence\">"));
+        assert!(html.contains("<pre>req</pre>"));
+        assert!(html.contains("<pre>resp</pre>"));
+    }
 }

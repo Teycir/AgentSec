@@ -47,13 +47,25 @@ pub fn sanitize_evidence_text(input: &str) -> String {
     // Order matters: private-key blocks and bearer tokens should be removed before
     // generic key/value patterns run over the remaining text.
     let patterns = [
-        (r"-----BEGIN [^-]+ PRIVATE KEY-----[\s\S]*?-----END [^-]+ PRIVATE KEY-----", "[REDACTED PRIVATE KEY]"),
+        (
+            r"-----BEGIN [^-]+ PRIVATE KEY-----[\s\S]*?-----END [^-]+ PRIVATE KEY-----",
+            "[REDACTED PRIVATE KEY]",
+        ),
         (r"(?i)(bearer\s+)[A-Za-z0-9._~+/=-]+", "$1[REDACTED]"),
         // Plain text: api_key=secret, token: secret, password = secret.
-        (r"(?i)((?:api[_-]?key|secret|token|password)\s*[:=]\s*)[^\s,;]+", "$1[REDACTED]"),
+        (
+            r"(?i)((?:api[_-]?key|secret|token|password)\s*[:=]\s*)[^\s,;]+",
+            "$1[REDACTED]",
+        ),
         // JSON-ish forms: "api_key":"secret" and 'token': 'secret'.
-        (r#"(?i)((?:\"|')?(?:api[_-]?key|secret|token|password)(?:\"|')?\s*:\s*)(?:\"[^\"]*\"|'[^']*'|[^,}\s]+)"#, "$1[REDACTED]"),
-        (r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", "[REDACTED EMAIL]"),
+        (
+            r#"(?i)((?:\"|')?(?:api[_-]?key|secret|token|password)(?:\"|')?\s*:\s*)(?:\"[^\"]*\"|'[^']*'|[^,}\s]+)"#,
+            "$1[REDACTED]",
+        ),
+        (
+            r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}",
+            "[REDACTED EMAIL]",
+        ),
     ];
 
     for (pattern, replacement) in patterns {

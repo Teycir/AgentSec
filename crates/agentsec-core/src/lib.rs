@@ -7,8 +7,8 @@
 
 pub mod exit_code;
 pub mod finding;
-pub mod owasp;
 pub mod outcome;
+pub mod owasp;
 pub mod session;
 pub mod severity;
 

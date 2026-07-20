@@ -58,7 +58,11 @@ fn main() {
         started_at: Utc::now(),
         finished_at: Utc::now(),
         target_ids: vec!["prod-agent".to_string(), "staging-agent".to_string()],
-        suite_ids: vec!["prompt-injection-basic".to_string(), "agent-tool-basic".to_string(), "rag-basic".to_string()],
+        suite_ids: vec![
+            "prompt-injection-basic".to_string(),
+            "agent-tool-basic".to_string(),
+            "rag-basic".to_string(),
+        ],
         findings,
         summary: agentsec_report::RunSummary {
             total_tests_run: 42,

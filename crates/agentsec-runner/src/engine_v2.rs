@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
 use agentsec_config::{Policies, Suite, SuiteTest, Target};
-use agentsec_core::{Evidence, Finding, SessionTrace, SessionTurn, Severity, TestOutcome, TestStatus};
+use agentsec_core::{
+    Evidence, Finding, SessionTrace, SessionTurn, Severity, TestOutcome, TestStatus,
+};
 use agentsec_scanners::{assertion_eval, Scanner, TargetResponse};
 use uuid::Uuid;
 
@@ -47,7 +49,10 @@ pub async fn run_suite(
             };
 
             cumulative_tokens += response.answer.chars().count() / 4;
-            responses_by_test.entry(test.id.clone()).or_default().push(response.clone());
+            responses_by_test
+                .entry(test.id.clone())
+                .or_default()
+                .push(response.clone());
             session.push_turn(SessionTurn {
                 sequence: repetition,
                 test_id: test.id.clone(),
@@ -81,7 +86,11 @@ pub async fn run_suite(
                 }
             }
 
-            if test.assertions.iter().all(|assertion| assertion_eval::evaluate(assertion, &response).passed) {
+            if test
+                .assertions
+                .iter()
+                .all(|assertion| assertion_eval::evaluate(assertion, &response).passed)
+            {
                 passed += 1;
             } else {
                 failed += 1;
@@ -102,26 +111,47 @@ pub async fn run_suite(
         let confidence = failed as f32 / repetitions as f32;
         let outcome = match status {
             TestStatus::Passed => TestOutcome::passed(test.id.clone(), repetitions, passed),
-            TestStatus::Failed => TestOutcome::failed(test.id.clone(), repetitions, passed, failed, confidence),
+            TestStatus::Failed => {
+                TestOutcome::failed(test.id.clone(), repetitions, passed, failed, confidence)
+            }
             TestStatus::Error => TestOutcome::error(
-                test.id.clone(), repetitions, errors,
-                first_error.clone().unwrap_or_else(|| "execution failed".to_string()),
+                test.id.clone(),
+                repetitions,
+                errors,
+                first_error
+                    .clone()
+                    .unwrap_or_else(|| "execution failed".to_string()),
             ),
             TestStatus::Inconclusive => TestOutcome::inconclusive(
-                test.id.clone(), repetitions, passed, failed, errors,
-                first_error.clone().unwrap_or_else(|| "mixed execution results".to_string()),
+                test.id.clone(),
+                repetitions,
+                passed,
+                failed,
+                errors,
+                first_error
+                    .clone()
+                    .unwrap_or_else(|| "mixed execution results".to_string()),
             ),
             TestStatus::Skipped => unreachable!(),
         };
         result.outcomes.push(outcome);
 
         if status == TestStatus::Failed {
-            if let Some(response) = responses_by_test.get(&test.id).and_then(|responses| responses.first()) {
+            if let Some(response) = responses_by_test
+                .get(&test.id)
+                .and_then(|responses| responses.first())
+            {
                 for assertion in &test.assertions {
                     let evaluation = assertion_eval::evaluate(assertion, response);
                     if !evaluation.passed {
                         result.findings.push(build_finding(
-                            run_id, target, suite, test, response, &evaluation, confidence,
+                            run_id,
+                            target,
+                            suite,
+                            test,
+                            response,
+                            &evaluation,
+                            confidence,
                         ));
                     }
                 }
@@ -133,27 +163,83 @@ pub async fn run_suite(
     for test in &suite.tests {
         let responses = responses_by_test.get(&test.id).cloned().unwrap_or_default();
         let repetitions = test.repetitions.max(1);
-        let single_test_suite = Suite { tests: vec![test.clone()], ..suite.clone() };
+        let single_test_suite = Suite {
+            tests: vec![test.clone()],
+            ..suite.clone()
+        };
 
         for response in responses {
-            merge_scanner(&mut merged, agentsec_scanners::PromptInjectionScanner, run_id, target, &single_test_suite, |_| response.clone(), repetitions);
-            merge_scanner(&mut merged, agentsec_scanners::SystemPromptLeakageScanner, run_id, target, &single_test_suite, |_| response.clone(), repetitions);
-            merge_scanner(&mut merged, agentsec_scanners::OutputHandlingScanner, run_id, target, &single_test_suite, |_| response.clone(), repetitions);
-            merge_scanner(&mut merged, agentsec_scanners::DataLeakageScanner, run_id, target, &single_test_suite, |_| response.clone(), repetitions);
-            merge_scanner(&mut merged, agentsec_scanners::RagScanner, run_id, target, &single_test_suite, |_| response.clone(), repetitions);
             merge_scanner(
                 &mut merged,
-                agentsec_scanners::AgentToolScanner { policy: policies.and_then(|p| p.tool_calls.as_ref()) },
-                run_id, target, &single_test_suite, |_| response.clone(), repetitions,
+                agentsec_scanners::PromptInjectionScanner,
+                run_id,
+                target,
+                &single_test_suite,
+                |_| response.clone(),
+                repetitions,
+            );
+            merge_scanner(
+                &mut merged,
+                agentsec_scanners::SystemPromptLeakageScanner,
+                run_id,
+                target,
+                &single_test_suite,
+                |_| response.clone(),
+                repetitions,
+            );
+            merge_scanner(
+                &mut merged,
+                agentsec_scanners::OutputHandlingScanner,
+                run_id,
+                target,
+                &single_test_suite,
+                |_| response.clone(),
+                repetitions,
+            );
+            merge_scanner(
+                &mut merged,
+                agentsec_scanners::DataLeakageScanner,
+                run_id,
+                target,
+                &single_test_suite,
+                |_| response.clone(),
+                repetitions,
+            );
+            merge_scanner(
+                &mut merged,
+                agentsec_scanners::RagScanner,
+                run_id,
+                target,
+                &single_test_suite,
+                |_| response.clone(),
+                repetitions,
+            );
+            merge_scanner(
+                &mut merged,
+                agentsec_scanners::AgentToolScanner {
+                    policy: policies.and_then(|p| p.tool_calls.as_ref()),
+                },
+                run_id,
+                target,
+                &single_test_suite,
+                |_| response.clone(),
+                repetitions,
             );
         }
     }
 
     result.findings.extend(merged.into_values());
     result.errors.extend(
-        result.outcomes.iter()
+        result
+            .outcomes
+            .iter()
             .filter(|outcome| outcome.status == TestStatus::Error)
-            .filter_map(|outcome| outcome.reason.clone().map(|reason| (outcome.test_id.clone(), reason))),
+            .filter_map(|outcome| {
+                outcome
+                    .reason
+                    .clone()
+                    .map(|reason| (outcome.test_id.clone(), reason))
+            }),
     );
     result.session = Some(session);
     Ok(result)
@@ -175,8 +261,12 @@ fn merge_scanner<S: Scanner>(
         } else {
             let mut finding = finding;
             finding.confidence = 1.0 / repetitions as f32;
-            finding.evidence.request_summary = agentsec_scanners::redact::sanitize_evidence_text(&finding.evidence.request_summary);
-            finding.evidence.response_summary = agentsec_scanners::redact::sanitize_evidence_text(&finding.evidence.response_summary);
+            finding.evidence.request_summary = agentsec_scanners::redact::sanitize_evidence_text(
+                &finding.evidence.request_summary,
+            );
+            finding.evidence.response_summary = agentsec_scanners::redact::sanitize_evidence_text(
+                &finding.evidence.response_summary,
+            );
             finding.evidence.redactions_applied = true;
             merged.insert(key, finding);
         }
@@ -244,7 +334,8 @@ fn resource_finding(
         owasp: vec!["LLM04: Model Denial of Service".to_string()],
         cwe: Vec::new(),
         evidence: sanitized_evidence(context.response, Some(assertion)),
-        recommendation: "Review resource limits, capacity, and model/provider configuration.".to_string(),
+        recommendation: "Review resource limits, capacity, and model/provider configuration."
+            .to_string(),
         references: Vec::new(),
         suppressed: false,
         suppression_reason: None,
@@ -253,8 +344,12 @@ fn resource_finding(
 
 fn sanitized_evidence(response: &TargetResponse, matched_assertion: Option<String>) -> Evidence {
     Evidence {
-        request_summary: agentsec_scanners::redact::sanitize_evidence_text(&response.request_summary),
-        response_summary: agentsec_scanners::redact::sanitize_evidence_text(&response.response_summary()),
+        request_summary: agentsec_scanners::redact::sanitize_evidence_text(
+            &response.request_summary,
+        ),
+        response_summary: agentsec_scanners::redact::sanitize_evidence_text(
+            &response.response_summary(),
+        ),
         raw_request_path: None,
         raw_response_path: None,
         trace_id: response.trace_id.clone(),
