@@ -43,6 +43,17 @@ pub struct SuiteTest {
     pub assertions: Vec<Assertion>,
     #[serde(default)]
     pub recommendation: String,
+    /// Number of independent executions for probabilistic model behavior.
+    #[serde(default = "default_repetitions")]
+    pub repetitions: usize,
+    /// Minimum successful assertion evaluations required for a test to pass.
+    /// Defaults to all repetitions, preserving the original deterministic behavior.
+    #[serde(default)]
+    pub min_passes: Option<usize>,
+}
+
+fn default_repetitions() -> usize {
+    1
 }
 
 /// Assertion types checked against a target's response.
