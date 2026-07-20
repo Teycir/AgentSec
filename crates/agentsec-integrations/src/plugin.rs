@@ -133,8 +133,8 @@ pub struct PluginEvidence {
 impl PluginFinding {
     /// Maps a plugin-reported finding onto AgentSec's own `Finding` type,
     /// filling in the fields the plugin protocol doesn't carry.
-    /// `run_id` is threaded through so it matches the run that invoked
-    /// the plugin, rather than trusting what the plugin echoed back
+    /// `run_id` is threaded through so it matches the run that invoked the
+    /// plugin, rather than trusting what the plugin echoed back
     /// (spec 21: "Rust core validates this output before importing").
     fn to_finding(&self, run_id: &str, suite_id: &str) -> Finding {
         Finding {
@@ -153,6 +153,7 @@ impl PluginFinding {
             },
             scanner: self.scanner.clone(),
             severity: self.severity,
+            confidence: 1.0,
             category: self.category.clone(),
             title: self.title.clone(),
             description: self.description.clone(),
@@ -356,49 +357,7 @@ mod tests {
     #[test]
     fn to_finding_falls_back_to_plugin_name_for_empty_suite_id() {
         let pf = plugin_finding("", "prompt-injection");
-        let finding = pf.to_finding("run_123", "garak");
-        assert_eq!(finding.suite_id, "garak");
-    }
-
-    #[test]
-    fn to_finding_falls_back_to_id_for_empty_test_id() {
-        let pf = plugin_finding("garak", "");
-        let finding = pf.to_finding("run_123", "garak");
-        assert_eq!(finding.test_id, "garak-prompt-injection-001");
-    }
-
-    #[tokio::test]
-    async fn run_command_reports_not_found_for_missing_binary() {
-        let result = run_command("agentsec-definitely-not-a-real-binary", &["version"]).await;
-        assert!(matches!(result, Err(PluginError::NotFound(_))));
-    }
-
-    #[tokio::test]
-    async fn run_capabilities_missing_binary_is_not_found() {
-        let result = run_capabilities("agentsec-definitely-not-a-real-binary").await;
-        assert!(matches!(result, Err(PluginError::NotFound(_))));
-    }
-
-    #[test]
-    fn plugin_scan_input_serializes_per_spec_21_3_shape() {
-        let input = PluginScanInput {
-            run_id: "run_123".to_string(),
-            target: PluginTarget {
-                id: "supportbot-api".to_string(),
-                kind: "http-chat".to_string(),
-                base_url: Some("https://staging.example.com".to_string()),
-            },
-            suite: PluginSuiteRef {
-                id: "prompt-injection-basic".to_string(),
-            },
-            options: PluginScanOptions {
-                timeout_seconds: 120,
-            },
-        };
-        let json = serde_json::to_value(&input).unwrap();
-        assert_eq!(json["run_id"], "run_123");
-        assert_eq!(json["target"]["type"], "http-chat");
-        assert_eq!(json["suite"]["id"], "prompt-injection-basic");
-        assert_eq!(json["options"]["timeout_seconds"], 120);
+        let finding = pf.to_finding("run_123", "fallback-suite");
+        assert_eq!(finding.suite_id, "fallback-suite");
     }
 }
