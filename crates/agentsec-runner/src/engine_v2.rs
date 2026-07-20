@@ -137,18 +137,47 @@ pub async fn run_suite(
         let responses = responses_by_test.get(&test.id).cloned().unwrap_or_default();
         let repetitions = test.repetitions.max(1);
         for response in responses {
-            let response_for = |candidate: &SuiteTest| {
-                if candidate.id == test.id { response.clone() } else { TargetResponse::default() }
-            };
-            merge_scanner(&mut merged, agentsec_scanners::PromptInjectionScanner, run_id, target, suite, response_for, repetitions);
-            merge_scanner(&mut merged, agentsec_scanners::SystemPromptLeakageScanner, run_id, target, suite, response_for, repetitions);
-            merge_scanner(&mut merged, agentsec_scanners::OutputHandlingScanner, run_id, target, suite, response_for, repetitions);
-            merge_scanner(&mut merged, agentsec_scanners::DataLeakageScanner, run_id, target, suite, response_for, repetitions);
-            merge_scanner(&mut merged, agentsec_scanners::RagScanner, run_id, target, suite, response_for, repetitions);
+            merge_scanner(
+                &mut merged,
+                agentsec_scanners::PromptInjectionScanner,
+                run_id, target, suite,
+                |candidate: &SuiteTest| if candidate.id == test.id { response.clone() } else { TargetResponse::default() },
+                repetitions,
+            );
+            merge_scanner(
+                &mut merged,
+                agentsec_scanners::SystemPromptLeakageScanner,
+                run_id, target, suite,
+                |candidate: &SuiteTest| if candidate.id == test.id { response.clone() } else { TargetResponse::default() },
+                repetitions,
+            );
+            merge_scanner(
+                &mut merged,
+                agentsec_scanners::OutputHandlingScanner,
+                run_id, target, suite,
+                |candidate: &SuiteTest| if candidate.id == test.id { response.clone() } else { TargetResponse::default() },
+                repetitions,
+            );
+            merge_scanner(
+                &mut merged,
+                agentsec_scanners::DataLeakageScanner,
+                run_id, target, suite,
+                |candidate: &SuiteTest| if candidate.id == test.id { response.clone() } else { TargetResponse::default() },
+                repetitions,
+            );
+            merge_scanner(
+                &mut merged,
+                agentsec_scanners::RagScanner,
+                run_id, target, suite,
+                |candidate: &SuiteTest| if candidate.id == test.id { response.clone() } else { TargetResponse::default() },
+                repetitions,
+            );
             merge_scanner(
                 &mut merged,
                 agentsec_scanners::AgentToolScanner { policy: policies.and_then(|p| p.tool_calls.as_ref()) },
-                run_id, target, suite, response_for, repetitions,
+                run_id, target, suite,
+                |candidate: &SuiteTest| if candidate.id == test.id { response.clone() } else { TargetResponse::default() },
+                repetitions,
             );
         }
     }
