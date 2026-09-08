@@ -15,10 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   via `--mutators`) against a live target, and writes an
   attack-lineage JSON recording each mutant's input, pass/fail, and
   whether it flipped the outcome vs. its seed. Validated live against
-  two real local Ollama models (gemma4, granite4) with no mocks:
-  both leaked the injected canary under `encoding` and
-  `instruction-reversal` framings; granite4 was also bypassed by
-  `roleplay`.
+  two real local Ollama models (gemma4, granite4) with no mocks: the
+  plain, unmutated seed prompt leaks the canary against both (the
+  actual vulnerability); `encoding` and `instruction-reversal`
+  mutations consistently stop the leak on both models, and `roleplay`
+  stops it on granite4 only — see
+  [`examples/ollama-local/README.md`](examples/ollama-local/README.md#cross-family-finding-real-from-attack-lineagejson)
+  for the full per-mutator table.
 
 Planned, not yet implemented (moved here from the README's former
 Roadmap section):
