@@ -11,7 +11,7 @@ mod network_policy;
 mod pipeline;
 mod templates;
 
-use cli::{Cli, Command};
+use cli::{Cli, Command, ExperimentCommand};
 use templates::{
     DATA_LEAKAGE_BASIC_SUITE, OUTPUT_HANDLING_BASIC_SUITE, PROMPT_INJECTION_BASIC_SUITE,
     SYSTEM_PROMPT_LEAKAGE_BASIC_SUITE,
@@ -56,6 +56,23 @@ async fn run(args: Cli) -> anyhow::Result<ExitCode> {
             timeout,
         } => commands::scan::run(target, suite, config, out, format, fail_on, timeout).await,
         Command::Plugin(plugin_cmd) => commands::plugin::run(plugin_cmd).await,
+        Command::Experiment(experiment_cmd) => match experiment_cmd {
+            ExperimentCommand::Run { path, config, out } => {
+                commands::experiment::run(path, config, out).await
+            }
+            ExperimentCommand::Replay {
+                result_path,
+                config,
+                out,
+            } => commands::experiment::replay(result_path, config, out).await,
+        },
+        Command::Attack {
+            target,
+            suite,
+            mutators,
+            config,
+            out,
+        } => commands::attack::run(target, suite, mutators, config, out).await,
     }
 }
 
@@ -220,11 +237,13 @@ pub fn validate_env_vars(
                 organization_env,
                 ..
             } => {
-                if std::env::var(api_key_env).is_err() {
-                    errors.push(agentsec_config::ValidationError::MissingEnvVar {
-                        target: target.id.clone(),
-                        var: api_key_env.clone(),
-                    });
+                if let Some(var) = api_key_env {
+                    if std::env::var(var).is_err() {
+                        errors.push(agentsec_config::ValidationError::MissingEnvVar {
+                            target: target.id.clone(),
+                            var: var.clone(),
+                        });
+                    }
                 }
                 if let Some(org_env) = organization_env {
                     if std::env::var(org_env).is_err() {

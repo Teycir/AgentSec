@@ -15,6 +15,7 @@ agentsec-runner = { workspace = true }
 agentsec-scanners = { workspace = true }
 agentsec-report = { workspace = true }
 agentsec-integrations = { workspace = true }
+agentsec-attacker = { workspace = true }
 clap = { workspace = true }
 tokio = { workspace = true }
 anyhow = { workspace = true }

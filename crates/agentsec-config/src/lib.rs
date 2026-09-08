@@ -6,11 +6,15 @@
 //! - Section 12 (Test Suite Format)
 //! - Section 8.3 (agentsec validate)
 
+pub mod experiment;
 pub mod project;
 pub mod suite;
 pub mod target;
 pub mod validate;
 
+pub use experiment::{
+    config_hash, ExecutionSettings, ExperimentManifest, ExperimentMeta, ExperimentSpec,
+};
 pub use project::{Policies, ProjectConfig, ToolCallPolicy};
 pub use suite::{Assertion, Suite, SuiteTest};
 pub use target::{Target, TargetKind};

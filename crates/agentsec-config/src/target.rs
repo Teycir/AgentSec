@@ -26,7 +26,12 @@ pub enum TargetKind {
     /// OpenAI-compatible `/chat/completions` API. Spec section 11.2.
     OpenaiCompatible {
         base_url: String,
-        api_key_env: String,
+        /// Env var holding the bearer token. Optional: local/unauthenticated
+        /// OpenAI-compatible servers (e.g. Ollama) don't require one — when
+        /// omitted, no `Authorization` header is sent and no env var is
+        /// required to be set.
+        #[serde(default)]
+        api_key_env: Option<String>,
         model: String,
         #[serde(default)]
         organization_env: Option<String>,

@@ -66,6 +66,57 @@ pub enum Command {
     /// External security-tool plugin adapters (spec 8.8).
     #[command(subcommand)]
     Plugin(PluginCommand),
+
+    /// Formal, reproducible experiment runner (roadmap Milestone 1).
+    #[command(subcommand)]
+    Experiment(ExperimentCommand),
+
+    /// Runs a suite test's original input plus deterministic mutations of
+    /// it against a live target (roadmap Milestone 2).
+    Attack {
+        #[arg(long)]
+        target: String,
+        #[arg(long)]
+        suite: String,
+        /// Comma-separated mutator names, or `all` for every built-in
+        /// mutator. See `agentsec-attacker::ALL_MUTATOR_NAMES`.
+        #[arg(long, value_delimiter = ',')]
+        mutators: Vec<String>,
+        #[arg(long, default_value = "agentsec.yml")]
+        config: String,
+        #[arg(long)]
+        out: Option<String>,
+    },
+}
+
+/// Roadmap Milestone 1: `agentsec experiment <subcommand>`.
+#[derive(Debug, Subcommand)]
+pub enum ExperimentCommand {
+    /// Runs one experiment.yml (target + suite + execution settings),
+    /// writing both the usual scan reports and an experiment-result.json
+    /// reproducibility manifest.
+    Run {
+        /// Path to an experiment.yml file.
+        path: String,
+        #[arg(long, default_value = "agentsec.yml")]
+        config: String,
+        #[arg(long)]
+        out: Option<String>,
+    },
+
+    /// Re-runs the experiment referenced by a previous experiment-result.json
+    /// manifest, and confirms the re-run manifest matches the original on
+    /// target id, model, suite id, and suite version. Does not assert the
+    /// model's actual output is identical — live model calls are not
+    /// bit-for-bit deterministic even with a seed set.
+    Replay {
+        /// Path to a previously-written experiment-result.json manifest.
+        result_path: String,
+        #[arg(long, default_value = "agentsec.yml")]
+        config: String,
+        #[arg(long)]
+        out: Option<String>,
+    },
 }
 
 /// Spec 8.8: `agentsec plugin <subcommand>`.

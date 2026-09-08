@@ -56,7 +56,7 @@ pub async fn execute(
                 client,
                 &target.id,
                 base_url,
-                api_key_env,
+                api_key_env.as_deref(),
                 model,
                 organization_env.as_deref(),
                 default_system_prompt.as_deref(),
@@ -133,7 +133,7 @@ async fn execute_openai_compatible(
     client: &reqwest::Client,
     target_id: &str,
     base_url: &str,
-    api_key_env: &str,
+    api_key_env: Option<&str>,
     model: &str,
     organization_env: Option<&str>,
     default_system_prompt: Option<&str>,
@@ -141,8 +141,16 @@ async fn execute_openai_compatible(
     max_tokens: Option<u32>,
     input: &str,
 ) -> Result<TargetResponse, RunnerError> {
-    let api_key = std::env::var(api_key_env)
-        .map_err(|_| RunnerError::MissingEnvVar(api_key_env.to_string()))?;
+    // `api_key_env` is optional: local/unauthenticated OpenAI-compatible
+    // servers (e.g. Ollama) don't require a bearer token. When set, the
+    // env var must still resolve — this is not a silent-degrade path for
+    // configs that *do* declare a key.
+    let api_key = match api_key_env {
+        Some(var) => {
+            Some(std::env::var(var).map_err(|_| RunnerError::MissingEnvVar(var.to_string()))?)
+        }
+        None => None,
+    };
 
     let mut messages = Vec::new();
     if let Some(system_prompt) = default_system_prompt {
@@ -162,10 +170,10 @@ async fn execute_openai_compatible(
     }
 
     let url = format!("{}/chat/completions", base_url.trim_end_matches('/'));
-    let mut builder = client
-        .post(&url)
-        .header("Authorization", format!("Bearer {api_key}"))
-        .json(&body);
+    let mut builder = client.post(&url).json(&body);
+    if let Some(key) = &api_key {
+        builder = builder.header("Authorization", format!("Bearer {key}"));
+    }
 
     if let Some(org_env) = organization_env {
         if let Ok(org) = std::env::var(org_env) {
