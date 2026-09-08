@@ -1,0 +1,10 @@
+experiment:
+  id: prompt-injection-ollama-example-001
+
+target: ollama-gemma4
+suite: prompt-injection-basic
+
+execution:
+  seed: 42
+  max_iterations: 1
+  timeout_seconds: 120
