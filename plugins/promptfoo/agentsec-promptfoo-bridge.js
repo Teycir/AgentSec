@@ -138,8 +138,19 @@ function extractFindingsFromPromptfooOutput(pfOutput, agentsecTargetId, runId) {
   };
 }
 
+function safeResolvePath(userPath, allowedBase) {
+  const resolved = path.resolve(userPath);
+  const base = path.resolve(allowedBase);
+  if (!resolved.startsWith(base + path.sep) && resolved !== base) {
+    throw new Error(`Path traversal detected: ${userPath}`);
+  }
+  return resolved;
+}
+
 function cmdScan(inputPath, outputPath) {
-  const input = JSON.parse(fs.readFileSync(inputPath, 'utf8'));
+  const safeInput = safeResolvePath(inputPath, os.tmpdir());
+  const safeOutput = safeResolvePath(outputPath, os.tmpdir());
+  const input = JSON.parse(fs.readFileSync(safeInput, 'utf8'));
 
   const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsec-promptfoo-'));
   const configPath = path.join(workDir, 'promptfooconfig.yaml');
@@ -172,7 +183,7 @@ function cmdScan(inputPath, outputPath) {
 
   const pfOutput = JSON.parse(fs.readFileSync(pfOutputPath, 'utf8'));
   const scanOutput = extractFindingsFromPromptfooOutput(pfOutput, input.target.id, input.run_id);
-  fs.writeFileSync(outputPath, JSON.stringify(scanOutput, null, 2));
+  fs.writeFileSync(safeOutput, JSON.stringify(scanOutput, null, 2));
 }
 
 function main() {

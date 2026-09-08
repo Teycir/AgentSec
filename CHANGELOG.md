@@ -7,12 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `agentsec attack` (spec Milestone 2): runs a suite test's original
+  input plus deterministic mutations of it (`roleplay`, `encoding`,
+  `delimiter`, `context-injection`, `instruction-reversal`, or `all`
+  via `--mutators`) against a live target, and writes an
+  attack-lineage JSON recording each mutant's input, pass/fail, and
+  whether it flipped the outcome vs. its seed. Validated live against
+  two real local Ollama models (gemma4, granite4) with no mocks:
+  both leaked the injected canary under `encoding` and
+  `instruction-reversal` framings; granite4 was also bypassed by
+  `roleplay`.
+
 Planned, not yet implemented (moved here from the README's former
 Roadmap section):
 
 - Generative adversarial fuzzing: a secondary attacker-LLM mutator loop
   (Ollama/OpenAI) to generate context-specific jailbreak attempts
-  dynamically. Ollama is not a current dependency — see the
+  dynamically, building on `agentsec attack`'s deterministic mutators
+  above. See the
   [README's Labs section](README.md#-labs-testing-against-live-vulnerable-targets).
 - RAG context-poisoning simulator with native mock vector DB connectors.
 - Cost and loop-exhaustion protection: monitor tokens, TTFT, and
@@ -23,6 +37,13 @@ Roadmap section):
 - Provider adapter templates for Gemini, Claude, and Bedrock.
 - Local web dashboard/sandbox (offline, axum-powered) for experimenting
   with prompt mitigations.
+
+### Security
+
+- `plugins/promptfoo/agentsec-promptfoo-bridge.js`: constrained both
+  the `scan` command's input and output file paths to `os.tmpdir()`
+  via a new `safeResolvePath` check, closing a path-traversal gap in
+  how the bridge resolved user-supplied paths.
 
 ## [1.0.0] - 2026-07-07
 

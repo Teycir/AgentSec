@@ -92,6 +92,7 @@ AgentSec's core value is that it translates LLM vulnerability scans into standar
     - [`agentsec validate`](#agentsec-validate)
     - [`agentsec ci`](#agentsec-ci)
     - [`agentsec scan`](#agentsec-scan)
+    - [`agentsec attack`](#agentsec-attack)
     - [`agentsec version`](#agentsec-version)
     - [`agentsec plugin`](#agentsec-plugin)
   - [🤝 Baseline \& Suppression Models](#-baseline--suppression-models)
@@ -414,6 +415,14 @@ Ad-hoc target scanning.
 *   `--format <json,sarif,junit,markdown,html>`
 *   `--fail-on <info | low | medium | high | critical | never>`
 *   `--timeout <SECONDS>`
+
+### `agentsec attack`
+Runs a suite test's original input plus deterministic mutations of it against a live target (roadmap Milestone 2), recording which mutants flip a failing seed into a pass (or vice versa) so you can see which framings actually bypass a target's defenses.
+*   `--target <ID>`
+*   `--suite <SUITE_ID>`
+*   `--mutators <NAMES_OR_all>` — comma-separated mutator names (`roleplay`, `encoding`, `delimiter`, `context-injection`, `instruction-reversal`), or `all` for every built-in mutator
+*   `--config <PATH>` (defaults to `agentsec.yml`)
+*   `--out <DIR>` — writes `attack-lineage.json` here
 
 ### `agentsec version`
 Prints binary version information.
