@@ -93,6 +93,27 @@ and a single run can also intermittently time out on the slower model
 (see Latency notes) — re-running is sometimes necessary to get a
 complete lineage.
 
+## What this validation proves
+
+This isn't a demo with stubbed responses. It is a real end-to-end run of
+AgentSec against three real local models, and the results prove concrete
+things you cannot learn from unit tests:
+
+- **The tool finds real vulnerabilities.** Prompt injection (LLM01: canary
+  leaked), output handling (LLM05: raw `<script>` tags), and system-prompt
+  leakage (LLM07: prompt disclosed on direct request) were all caught from
+  live model behaviour, not mocked fixtures.
+- **Attack efficacy varies by model family.** A `roleplay` framing that
+  *increases* gemma4's compliance with injection *decreases* granite4's
+  compliance. A single mutation set does not generalize — this is the core
+  risk a cross-family attacker/target pairing (Milestone 4) exists to surface.
+- **Re-runs are required.** gemma4 flipped from leaking to not-leaking the
+  canary between the original validation and the full-coverage re-run. One
+  run is not authoritative against a stochastic target.
+- **The evidence is CI/CD-ready.** Every result is JSON with trace IDs,
+  OWASP/CWE tags, and redacted request/response pairs — machine-readable
+  enough to gate a build with `--fail-on high` and `--baseline`.
+
 ## How validation was proven (methodology & quality)
 
 Validation used two independent techniques that corroborate each other:
