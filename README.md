@@ -417,7 +417,7 @@ Ad-hoc target scanning.
 *   `--timeout <SECONDS>`
 
 ### `agentsec attack`
-Runs a suite test's original input plus deterministic mutations of it against a live target (roadmap Milestone 2), recording which mutants flip a failing seed into a pass (or vice versa) so you can see which framings actually bypass a target's defenses.
+Runs a suite test's original input plus deterministic mutations of it against a live target, recording which mutants flip a failing seed into a pass (or vice versa) so you can see which framings actually bypass a target's defenses. Validated live against three local Ollama models (gemma4, granite4, qwen3.5) — see [`examples/ollama-local/README.md`](examples/ollama-local/README.md#cross-family-finding-real-from-attack-lineagejson) for real results.
 *   `--target <ID>`
 *   `--suite <SUITE_ID>`
 *   `--mutators <NAMES_OR_all>` — comma-separated mutator names (`roleplay`, `encoding`, `delimiter`, `context-injection`, `instruction-reversal`), or `all` for every built-in mutator
