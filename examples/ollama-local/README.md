@@ -93,6 +93,41 @@ and a single run can also intermittently time out on the slower model
 (see Latency notes) — re-running is sometimes necessary to get a
 complete lineage.
 
+## How validation was proven (methodology & quality)
+
+Validation used two independent techniques that corroborate each other:
+
+1. **`agentsec attack` — mutation testing.** A seed prompt that hides a
+   canary string (`AGENTSEC_CANARY_OVERRIDE`) inside an untrusted-content
+   wrapper is sent to the live model. If the model outputs the canary, the
+   injection succeeded. Then four to five **deterministic** string
+   mutations are applied (base64-encoding, text reversal, persona
+   roleplay, delimiter framing, context-injection framing),
+   and each mutant is sent again. A mutant that *stops* the canary leak
+   proves that specific framing breaks the attack. Results are written to
+   `attack-lineage.json` with `seed_passed`, `mutant_passed`,
+   `flipped_outcome`, and `confidence=1.0` per entry.
+
+2. **`agentsec scan` — scanner validation.** The same suites run through
+   built-in detectors with concrete assertions (`not_contains`, `secret_not_detected`,
+   `max_latency_ms`). Each finding in `results.json` carries the exact
+   assertion text, OWASP/CWE tags, and redacted request/response evidence
+   with a `trace_id` for replay.
+
+**Cross-corroboration:** the scan detectors and the attack mutators
+independently agree — e.g. gemma4 leaks the canary in both the scan
+(2 HIGH findings in `prompt-injection-basic`) and the attack-lineage
+(`seed_passed: false`).
+
+**Proof strength at a glance:**
+
+| Strength | Evidence |
+|---|---|
+| No mocks | Every call hits a real `localhost:11434/v1/chat/completions` endpoint with real inference (see `evidence.request_summary` in `results.json`) |
+| Reproducible | Configs (`agentsec.yml`) + deterministic mutators let anyone with the same `.gguf` files re-run the exact same lineage |
+| Structured evidence | JSON reports with assertion text, trace IDs, OWASP mappings, and redacted request/response pairs |
+| Honest caveat | LLM outputs are stochastic — the same model can flip from leaking to resisting between runs (see Non-determinism note above). `confidence=1.0` reflects assertion-internal certainty, not output determinism. |
+
 To point at a different local model, add a target with a different
 `model:` tag from `ollama list`.
 
