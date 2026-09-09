@@ -1,6 +1,7 @@
 .history
 target/
 reports/
+full-coverage-run/
 .env
 .env.*
 .gif-build/
