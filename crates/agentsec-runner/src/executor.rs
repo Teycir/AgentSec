@@ -1,8 +1,9 @@
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use agentsec_config::target::{HttpRequestSpec, HttpResponseSpec, TargetKind};
 use agentsec_config::Target;
 use agentsec_scanners::TargetResponse;
+use reqwest::StatusCode;
 use serde_json::Value;
 
 use crate::error::RunnerError;
@@ -29,9 +30,100 @@ fn render_value(value: &Value, input: &str) -> Value {
     }
 }
 
+/// Checks a response status for conditions other than success, before the
+/// body is read. 401/403 map to `AuthError`; any other non-2xx status
+/// (429 rate-limiting, 5xx server errors, etc.) maps to `TargetError`, so
+/// a rate-limited or overloaded target is distinguishable from both a bad
+/// credential and a dead connection in reports/logs.
+fn check_status(target_id: &str, status: StatusCode) -> Result<(), RunnerError> {
+    if status.as_u16() == 401 || status.as_u16() == 403 {
+        return Err(RunnerError::AuthError {
+            target_id: target_id.to_string(),
+            status: status.as_u16(),
+        });
+    }
+    if !status.is_success() {
+        return Err(RunnerError::TargetError {
+            target_id: target_id.to_string(),
+            status: status.as_u16(),
+        });
+    }
+    Ok(())
+}
+
+/// Reads a response body and parses it as JSON, preserving the parse error
+/// (and a snippet of the raw body) instead of silently substituting an
+/// empty string. A malformed or truncated body -- e.g. from a connection
+/// dropped mid-response -- now surfaces as `ResponseParse` rather than
+/// masquerading downstream as a generic `ResponseExtraction` (jsonpath)
+/// failure with no diagnostic trail.
+async fn parse_json_body(
+    target_id: &str,
+    status: StatusCode,
+    response: reqwest::Response,
+) -> Result<Value, RunnerError> {
+    let bytes = response
+        .bytes()
+        .await
+        .map_err(|e| RunnerError::TargetUnavailable {
+            target_id: target_id.to_string(),
+            source: e,
+        })?;
+
+    serde_json::from_slice::<Value>(&bytes).map_err(|parse_err| {
+        let body_snippet = char_boundary_truncate(&String::from_utf8_lossy(&bytes), 200);
+        RunnerError::ResponseParse {
+            target_id: target_id.to_string(),
+            status: status.as_u16(),
+            body_snippet,
+            source: parse_err,
+        }
+    })
+}
+
+/// Truncates `s` to at most `max_bytes` bytes without splitting a
+/// multi-byte UTF-8 character, which `&s[..max_bytes]` can do and panic
+/// on. Walks backward from `max_bytes` to the nearest char boundary.
+fn char_boundary_truncate(s: &str, max_bytes: usize) -> String {
+    if s.len() <= max_bytes {
+        return s.to_string();
+    }
+    let mut end = max_bytes;
+    while end > 0 && !s.is_char_boundary(end) {
+        end -= 1;
+    }
+    format!("{}... [truncated]", &s[..end])
+}
+
 /// Executes one suite test's `input` against `target`, returning a
 /// normalized `TargetResponse` for scanners to evaluate.
+///
+/// `timeout_seconds` enforces an independent, runner-level deadline on the
+/// whole call (request send + body read + JSON parse), on top of whatever
+/// deadline the given `client` was itself built with. This is deliberate
+/// defense-in-depth: an indefinite hang was observed against a local
+/// Ollama target with no explanation found in the HTTP client's own
+/// configuration, so a single timeout source is not trusted alone. Pass
+/// the same value used to build `client` (see `build_http_client`) unless
+/// a tighter runner-level bound is specifically wanted.
 pub async fn execute(
+    client: &reqwest::Client,
+    target: &Target,
+    input: &str,
+    timeout_seconds: u64,
+) -> Result<TargetResponse, RunnerError> {
+    let target_id = target.id.clone();
+    let deadline = Duration::from_secs(timeout_seconds);
+    match tokio::time::timeout(deadline, execute_inner(client, target, input)).await {
+        Ok(result) => result,
+        Err(_elapsed) => Err(RunnerError::ExecutionTimeout {
+            target_id,
+            timeout_seconds,
+        }),
+    }
+}
+
+async fn execute_inner(
     client: &reqwest::Client,
     target: &Target,
     input: &str,
@@ -113,17 +205,9 @@ async fn execute_http_chat(
     let latency_ms = started.elapsed().as_millis() as u64;
 
     let status = http_response.status();
-    if status.as_u16() == 401 || status.as_u16() == 403 {
-        return Err(RunnerError::AuthError {
-            target_id: target_id.to_string(),
-            status: status.as_u16(),
-        });
-    }
+    check_status(target_id, status)?;
 
-    let raw_json: Value = http_response
-        .json()
-        .await
-        .unwrap_or(Value::String(String::new()));
+    let raw_json = parse_json_body(target_id, status, http_response).await?;
 
     build_target_response(target_id, &url, &body, raw_json, response_spec, latency_ms)
 }
@@ -192,17 +276,9 @@ async fn execute_openai_compatible(
     let latency_ms = started.elapsed().as_millis() as u64;
 
     let status = http_response.status();
-    if status.as_u16() == 401 || status.as_u16() == 403 {
-        return Err(RunnerError::AuthError {
-            target_id: target_id.to_string(),
-            status: status.as_u16(),
-        });
-    }
+    check_status(target_id, status)?;
 
-    let raw_json: Value = http_response
-        .json()
-        .await
-        .unwrap_or(Value::String(String::new()));
+    let raw_json = parse_json_body(target_id, status, http_response).await?;
 
     let response_spec = HttpResponseSpec {
         answer_json_path: "$.choices.0.message.content".to_string(),
@@ -264,10 +340,5 @@ fn build_target_response(
 }
 
 fn summarize_json(value: &Value) -> String {
-    let s = value.to_string();
-    if s.len() > 200 {
-        format!("{}... [truncated]", &s[..200])
-    } else {
-        s
-    }
+    char_boundary_truncate(&value.to_string(), 200)
 }

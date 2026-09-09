@@ -11,7 +11,7 @@ use owo_colors::OwoColorize;
 use agentsec_attacker::{mutator_by_name, AttackCase, MutationContext, ALL_MUTATOR_NAMES};
 use agentsec_config::Assertion;
 use agentsec_core::ExitCode;
-use agentsec_scanners::assertion_eval;
+use agentsec_scanners::{AssertionEvaluator, Evaluator};
 
 use crate::{load_project_config_or_adhoc_default, load_suite, resolve_target};
 
@@ -87,6 +87,7 @@ pub async fn run(
             &client,
             &resolved_target,
             &test.input,
+            project_config.ci.timeout_seconds,
         )
         .await
         {
@@ -96,10 +97,12 @@ pub async fn run(
                 continue;
             }
         };
-        let seed_passed = test
-            .assertions
-            .iter()
-            .all(|a| assertion_eval::evaluate(a, &seed_response).passed);
+        let seed_passed = test.assertions.iter().all(|a| {
+            AssertionEvaluator { assertion: a }
+                .evaluate(&seed_response)
+                .expect("AssertionEvaluator always judges")
+                .passed
+        });
 
         println!(
             "  seed: {}",
@@ -122,6 +125,7 @@ pub async fn run(
                     &client,
                     &resolved_target,
                     &case.input,
+                    project_config.ci.timeout_seconds,
                 )
                 .await
                 {
@@ -136,10 +140,26 @@ pub async fn run(
                         continue;
                     }
                 };
-                let mutant_passed = test
+                let mutant_passed = test.assertions.iter().all(|a| {
+                    AssertionEvaluator { assertion: a }
+                        .evaluate(&response)
+                        .expect("AssertionEvaluator always judges")
+                        .passed
+                });
+                // Every assertion is deterministic today (spec Milestone
+                // 3), so this is always 1.0 — recorded explicitly rather
+                // than assumed, so the lineage stays honest if/when a
+                // probabilistic evaluator is added later.
+                let confidence = test
                     .assertions
                     .iter()
-                    .all(|a| assertion_eval::evaluate(a, &response).passed);
+                    .map(|a| {
+                        AssertionEvaluator { assertion: a }
+                            .evaluate(&response)
+                            .expect("AssertionEvaluator always judges")
+                            .confidence
+                    })
+                    .fold(1.0_f32, f32::min);
 
                 let flipped = mutant_passed != seed_passed;
                 if flipped {
@@ -170,8 +190,12 @@ pub async fn run(
                     "suite_id": loaded_suite.id,
                     "seed_passed": seed_passed,
                     "mutant_passed": mutant_passed,
+                    "confidence": confidence,
                     "flipped_outcome": flipped,
                     "mutant_input": case.input,
+                    "mutant_response": agentsec_scanners::redact::sanitize_evidence_text(
+                        &response.answer,
+                    ),
                 }));
             }
         }

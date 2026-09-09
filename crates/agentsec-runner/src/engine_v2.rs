@@ -18,6 +18,11 @@ pub struct SuiteRunResult {
     pub session: Option<SessionTrace>,
 }
 
+/// `timeout_seconds` is passed straight through to `executor::execute` for
+/// every call this suite makes -- pass the same value used to build
+/// `client` (see `build_http_client`) unless a different runner-level
+/// bound is specifically wanted.
+#[allow(clippy::too_many_arguments)]
 pub async fn run_suite(
     client: &reqwest::Client,
     run_id: &str,
@@ -25,6 +30,7 @@ pub async fn run_suite(
     suite: &Suite,
     limits: Option<&agentsec_config::project::LimitsSettings>,
     policies: Option<&Policies>,
+    timeout_seconds: u64,
 ) -> Result<SuiteRunResult, RunnerError> {
     let mut result = SuiteRunResult::default();
     let mut session = SessionTrace::new(run_id);
@@ -39,14 +45,15 @@ pub async fn run_suite(
         let mut first_error = None;
 
         for repetition in 0..repetitions {
-            let response = match executor::execute(client, target, &test.input).await {
-                Ok(response) => response,
-                Err(error) => {
-                    errors += 1;
-                    first_error.get_or_insert_with(|| error.to_string());
-                    continue;
-                }
-            };
+            let response =
+                match executor::execute(client, target, &test.input, timeout_seconds).await {
+                    Ok(response) => response,
+                    Err(error) => {
+                        errors += 1;
+                        first_error.get_or_insert_with(|| error.to_string());
+                        continue;
+                    }
+                };
 
             cumulative_tokens += response.answer.chars().count() / 4;
             responses_by_test

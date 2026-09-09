@@ -220,6 +220,7 @@ pub async fn run_scan_pipeline(
                 suite,
                 config.limits.as_ref(),
                 config.policies.as_ref(),
+                timeout,
             )
             .await
             {

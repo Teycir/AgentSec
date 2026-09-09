@@ -10,6 +10,7 @@ pub mod agent_tool;
 pub mod assertion_eval;
 pub(crate) mod common;
 pub mod data_leakage;
+pub mod evaluator;
 pub mod output_handling;
 pub mod prompt_injection;
 pub mod rag;
@@ -19,6 +20,7 @@ pub mod system_prompt_leakage;
 
 pub use agent_tool::AgentToolScanner;
 pub use data_leakage::DataLeakageScanner;
+pub use evaluator::{AssertionEvaluator, DetectorEvaluator, Evaluator, EvaluatorResult};
 pub use output_handling::OutputHandlingScanner;
 pub use prompt_injection::PromptInjectionScanner;
 pub use rag::RagScanner;
