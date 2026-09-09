@@ -23,15 +23,17 @@ name: AgentSec
 command: agentsec
 install: cargo install --path crates/agentsec-cli
 languages: Rust (single binary)
-operating_modes: [ci, scan, validate, init, version, plugin]
-target_types: [http-chat, openai-compatible, command, lab]
-built_in_suites:
+operating_modes: [ci, scan, validate, init, version, plugin, attack, experiment]
+target_types: [http-chat, openai-compatible, rag, agent]
+suites:
+  # 4 compiled into the binary (no file on disk required):
   - prompt-injection-basic
   - system-prompt-leakage-basic
-  - rag-basic
-  - agent-tool-basic
   - output-handling-basic
   - data-leakage-basic
+  # 2 ship as files in suites/ (must exist on disk):
+  - rag-basic
+  - agent-tool-basic
 reports: [json, sarif, junit, markdown, html]
 security_controls: [redaction, network-allowlist, deny-private-networks, baseline-comparisons, suppressions]
 ```
@@ -93,6 +95,7 @@ AgentSec's core value is that it translates LLM vulnerability scans into standar
     - [`agentsec ci`](#agentsec-ci)
     - [`agentsec scan`](#agentsec-scan)
     - [`agentsec attack`](#agentsec-attack)
+    - [`agentsec experiment`](#agentsec-experiment)
     - [`agentsec version`](#agentsec-version)
     - [`agentsec plugin`](#agentsec-plugin)
   - [🤝 Baseline \& Suppression Models](#-baseline--suppression-models)
@@ -243,17 +246,28 @@ AgentSec is engineered to run quickly and protect data privacy, executing scans 
 graph TD
     subgraph CI_Pipeline["CI/CD Runner"]
         Command[🖥️ CLI: agentsec ci / scan / plugin run]
+        Experiment[🧪 CLI: agentsec experiment run / replay]
+        Attack[⚔️ CLI: agentsec attack]
     end
 
     subgraph Config["Configuration"]
         AYML[YAML Config: agentsec.yml]
         SUPP[Suppressions: suppressions.yml]
         BASE[Baseline: main.json]
+        EXPYML[Experiment: experiment.yml]
     end
 
     subgraph Core["Execution Core"]
         NetGate[🛡️ Network Control allowed-hosts / private-IP check]
         Executor[🔌 Target Executor HTTP / OpenAI-compatible / Lab]
+    end
+
+    subgraph Attacker["agentsec-attacker (mutators)"]
+        MutRole[roleplay]
+        MutEnc[encoding]
+        MutDelim[delimiter]
+        MutCtx[context-injection]
+        MutRev[instruction-reversal]
     end
 
     subgraph Target_App["Target App"]
@@ -281,6 +295,8 @@ graph TD
         JUNIT[results.junit.xml]
         MD[summary.md]
         HTML[report.html]
+        MANIFEST[experiment-result.json]
+        LINEAGE[attack-lineage.json]
     end
 
     Command --> AYML
@@ -303,6 +319,19 @@ graph TD
     Formatting --> JUNIT
     Formatting --> MD
     Formatting --> HTML
+
+    Experiment --> EXPYML
+    EXPYML --> Executor
+    Executor --> MANIFEST
+
+    Attack --> Attacker
+    Attacker --> MutRole
+    Attacker --> MutEnc
+    Attacker --> MutDelim
+    Attacker --> MutCtx
+    Attacker --> MutRev
+    Attacker --> Executor
+    Executor --> LINEAGE
 ```
 
 ---
@@ -424,6 +453,15 @@ Runs a suite test's original input plus deterministic mutations of it against a 
 *   `--config <PATH>` (defaults to `agentsec.yml`)
 *   `--out <DIR>` — writes `attack-lineage.json` here
 
+### `agentsec experiment`
+Reproducibility wrapper around the scan pipeline — no mutation, no attacker LLM. Writes an `experiment-result.json` manifest (seed, SHA-256 config hash, agentsec version, target/model identifiers, timestamp) alongside the usual scan reports.
+*   `agentsec experiment run <PATH>` — runs an `experiment.yml` (target + suite + execution settings) through the existing scan pipeline
+    *   `--config <PATH>` (defaults to `agentsec.yml`)
+    *   `--out <DIR>`
+*   `agentsec experiment replay <RESULT_PATH>` — re-runs the experiment referenced by a previous `experiment-result.json` manifest and confirms the new manifest matches the original on target id, model, suite id, and suite version (does not assert byte-identical model output — live model calls aren't bit-for-bit deterministic even with a seed set)
+    *   `--config <PATH>` (defaults to `agentsec.yml`)
+    *   `--out <DIR>`
+
 ### `agentsec version`
 Prints binary version information.
 
@@ -517,19 +555,31 @@ agentsec:
 ```groovy
 pipeline {
   agent any
+
   environment {
     AGENTSEC_API_KEY = credentials('agentsec-api-key')
   }
+
   stages {
+    stage('Install AgentSec') {
+      steps {
+        sh 'curl -sSL https://agentsec.dev/install.sh | sh'
+      }
+    }
+
     stage('Run AgentSec') {
       steps {
         sh '''
-          cargo install --path crates/agentsec-cli
-          agentsec ci --config agentsec.yml --out reports/agentsec --format json,junit,markdown --fail-on high
+          agentsec ci \
+            --config agentsec.yml \
+            --out reports/agentsec \
+            --format json,junit,markdown \
+            --fail-on high
         '''
       }
     }
   }
+
   post {
     always {
       archiveArtifacts artifacts: 'reports/agentsec/**', fingerprint: true
@@ -562,7 +612,8 @@ agentsec/
 │   ├── agentsec-runner/      # Request execution engine
 │   ├── agentsec-scanners/    # Built-in scanners and assertions evaluation
 │   ├── agentsec-report/      # Formatter (JSON, SARIF, JUnit, Markdown, HTML)
-│   └── agentsec-integrations/# Pluggable tool connectors
+│   ├── agentsec-integrations/# Pluggable tool connectors
+│   └── agentsec-attacker/    # Deterministic mutators for `agentsec attack`
 ├── examples/
 │   ├── github-actions.yml
 │   ├── gitlab-ci.yml

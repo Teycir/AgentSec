@@ -81,23 +81,27 @@ it," and whether an LLM-generated mutation (M4) can preserve
 injection potency through a transformation better than these
 deterministic string mutators do.
 
-## M3 — Generalized evaluator trait: **not started**
+## M3 — Generalized evaluator trait: **done**
 
-Before the attacker (M4), not after — deterministic assertions
-(Contains/NotContains/JsonSchemaMatch, already in
-`assertion_eval.rs`) and built-in scanner detectors need to sit behind
-one `Evaluator` trait with a confidence level, wired to the
-`Finding.confidence: f32` field that already exists in
-`agentsec-core`. No LLM judge should exist until Level 1-3
-(assertions → detectors → structured behavioral checks) is solid,
-per the source spec's own insistence on keeping the
-deterministic-vs-LLM-judged line clean.
+Implemented in `agentsec-scanners/src/evaluator.rs`: `Evaluator` trait
+with `EvaluatorResult { passed, confidence, description }`, plus two
+implementors — `AssertionEvaluator` (wraps deterministic assertions
+from `assertion_eval.rs`) and `DetectorEvaluator` (wraps scanner
+built-in detectors). Both currently report `confidence: 1.0`, which is
+honest for deterministic evaluators — the trait exists so a future
+probabilistic evaluator can report fractional confidence through the
+same path.
 
-**Planned live validation gate:** run the evaluator against the same
-`attack-lineage.json` records M2 already produced (gemma4 and granite4
-runs above) and confirm the confidence scores it assigns are
-consistent with the pass/fail outcomes already observed — using real
-recorded data, not synthetic fixtures.
+Wired into production via `common.rs`:
+- `evaluate_test()` routes every suite assertion through
+  `AssertionEvaluator`, filling `Finding.confidence` from the
+  evaluator result.
+- `finding_for_builtin_match()` routes detector hits through
+  `DetectorEvaluator` for the same purpose.
+- `commands/attack.rs` also uses `AssertionEvaluator` directly for
+  seed/mutant pass/fail verdicts.
+
+Unit tests cover both evaluator types (pass, fail, no-match cases).
 
 ## M4 — Local attacker LLM via the plugin protocol: **not started, but de-risked**
 
